@@ -5,3 +5,9 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
+
+# Keccak256 - SP1 compatible
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+
+# For hex encoding in tests
+hex = { workspace = true }
