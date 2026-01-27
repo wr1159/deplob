@@ -4,25 +4,8 @@ pragma solidity ^0.8.24;
 import {Test, console} from "forge-std/Test.sol";
 import {DePLOB} from "../src/DePLOB.sol";
 import {IDePLOB} from "../src/interfaces/IDePLOB.sol";
-import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
-
-/// @notice Mock SP1 Verifier for testing
-contract MockSP1Verifier is ISP1Verifier {
-    bool public shouldPass = true;
-
-    function setShouldPass(bool _shouldPass) external {
-        shouldPass = _shouldPass;
-    }
-
-    function verifyProof(
-        bytes32,
-        bytes calldata,
-        bytes calldata
-    ) external view override {
-        require(shouldPass, "Proof verification failed");
-    }
-}
+import {MockSP1Verifier} from "./mocks/MockSP1Verifier.sol";
 
 contract DePLOBTest is Test {
     DePLOB public deplob;
