@@ -1,0 +1,306 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{mathptmx}
+\usepackage{amsmath} 
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{float}
+% \usepackage{showframe}
+\usepackage[
+  backend=biber,
+  style=apa,    
+  sorting=nyt
+]{biblatex}
+\addbibresource{references.bib}
+
+\title{Research in Blockchain and Cryptocurrency – \\
+DePLOB: Decentralised Private Limit Order Book}
+\author{Chu Wei Rong}
+\date{November 2025}
+
+\renewcommand{\baselinestretch}{1.5} 
+\makeatletter
+\let\vtitle\@title
+\let\vauthor\@author
+\let\vdate\@date
+\newcommand{\showfontsize}{\f@size{} pt}
+\makeatother
+
+
+\newcommand{\customtitle}{%
+    \begin{center}
+        B.Comp. Dissertation\\[6em]
+        \large \textbf{\vtitle}\\[6em]
+        \normalsize By
+        \vauthor\\[4em]
+        Department of Computer Science\\[1em]
+        School of Computing\\[1em]
+        National University of Singapore\\[1em]
+        2025/2026\\[4em]
+    \end{center}
+    Project No: H392120\\
+    Advisor: Prof. Zhang Jiaheng
+}
+
+\begin{document}
+
+\begin{titlepage}
+\customtitle
+\end{titlepage}
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+\section{Introduction}
+\subsection{Problem Motivation} 
+Blockchain technology and finance started its first days with the launch of Bitcoin, the frst peer-to-peer internet money network \parencite{bitcoin}. This adoption is mainly powered by Smart Contracts, first coined in Ethereum \parencite{ethereum}. This use of smart contracts for finance is coined Decentralised Finance (DeFi) due to blockchain's decentralised property where no one can be completely censored from using the network. In DeFi, the cornerstone of all decentralised applications (dApps) are Decentralised Exchanges (DEXs) where users can swap one cryptocurrencies for another \parencite{lin2019deconstructing}.
+
+Due to the same decentralised nature of blockchain, every transaction, whether it is a liquidity pool swap, order placement or cancellation will all result in a publicly visible state transition on the blockchain. This means the entire order book state, its updates, the wallets of users involved, and the amounts involved are visible to observers unless additional privacy measures are applied \parencite{schar2021decentralized}.
+
+Privacy in decentralized exchanges is a critical protection for traders, especially those executing large orders or leveraged positions. The inherently public nature of blockchain transactions enables adversaries to observe pending transactions, infer trader intentions or liquidation thresholds, and exploit that information via front-running, sandwich attacks or coordinated liquidation hunts. In their work on DEX adversarial behaviour, \textcite{daian2019flash} show that bots routinely monitor broadcast transactions and compete via priority-gas-auctions to insert themselves ahead of honest traders, thereby extracting value then known as miner-extractable value (MEV) and degrading market fairness. 
+
+Furthermore, recent commentary from Changpeng Zhao (“CZ”) (2025), co-founder of Binance, one of the largest cryptocurrency exchanges underscores the demand for privacy-focused trading infrastructure: “I have always been puzzled with the fact that everyone can see your orders in real-time on a DEX… If others can see your liquidation point, they could try to push the market to liquidate you.”
+
+\subsubsection{Dark Pools}
+Dark pools are traditional finance trading systems that do not publicly display orders and are only accessible to certain entities often times institutions. These venues emerged to enable trades with reduced market impact and reduced information leakage relative to daytime public exchanges. Because order book data is not visible to the broader market, dark pools operate with limited transparency and are subject to scrutiny regarding their effects on price discovery and fairness. However, as stated by \textcite{zhu2014dark}, adding a dark pool to existing exchanges concentrate price-relevant information into the exchange and therefore improves price discovery. Therefore, an on-chain dark pool DEX would benefit the rich DeFi ecosystem. 
+
+\subsection{Research Objectives}
+The main objectives of the research is to design and implement a Decentralised Private Limit Order Book (DePLOB), evaluating its effectiveness and potential impact.
+
+\textit{DePLOB} is an on-chain shielded pool DEX where users would be able to swap tokens in a CLOB fashion through limit orders all while preserving privacy of the users. This means that although users still makes a transaction on the blockchain to create or cancel the order , the data would be encrypted such that no order-related information like sizing, direction, depositor would be visible on the blockchain. 
+
+This will be performed with a combination of Zero-Knowledge Proofs (ZKP), Trusted Execution Environment (TEE) and smart contracts which users can interact with on the blockchain.
+
+In this semester, I mainly focused my efforts on understanding preliminary knowledge, researching similar protocols to understand limitations of current implementations which could be improved on and designing the system.
+
+\section{Preliminary Knowledge}
+\subsection{Blockchain}
+
+\textbf{Blockchain} can be thought as a public database with no centralised server thereby, allowing any party to create a transaction on it. The key to its decentralisation is the \textbf{consensus layer}, which enables a distributed network of nodes to agree on a single sequence of transactions and state transitions \parencite{abraham2017blockchain}. Consensus mechanisms such as Proof-of-Work (PoW) used in Bitcoin \parencite{bitcoin} and Proof-of-Stake (PoS) now used in Ethereum \parencite{ethereum} define the rules by which blocks are proposed, validated, and finalised.
+
+Above consensus lies the \textbf{execution layer} introduced by Ethereum \parencite{ethereum}, which is responsible for processing transactions, executing smart-contract logic and updating the global state. Once consensus orders a block, the execution layer processes each transaction in that block, applying computation, state changes, event generation and gas accounting. As \textcite{masla2021reduction} put it, \textbf{gas} is the cost paid in the network cryptocurrency like Ether on Ethereum network. Gas is associated with each transaction that validators nodes will receive for running a computation therefore, the more intensive the compute, the higher the gas required. 
+
+The defining attribute of public blockchains is their transparency and auditability. All transactions, blocks and state updates are recorded in a manner that is publicly visible and verifiable. This transparency enables trust without a central intermediary, since any participant can inspect the blockchain, verify historical transactions and monitor state transitions. 
+
+Every blockchain user controls an \textbf{asymmetric cryptographic key pair}. This pair consists of a private key, which is kept secret and used to sign transactions, and a public key (or address derived from it), which is shared to receive funds \parencite{aydar2019private}. 
+
+When a user wishes to perform a transaction, they use the private key to generate a signature authorising the transfer of assets. the network uses the corresponding public key to verify the signature’s validity without revealing the private key. This mechanism ensures that ownership and transaction validity can be verified publicly while maintaining the secrecy of the private key. The publicly visible address becomes the counterpart in the ledger for sending and receiving assets, but because the address is pseudonymous (not inherently tied to a real‐world identity), users maintain a degree of anonymity \parencite{JAMWAL2024104019}.
+
+\subsection{Decentralised Finance (DeFi)}
+\textbf{Decentralised finance (DeFi)} refers to the ecosystem of financial services built on blockchain infrastructure, in which smart contracts replace traditional intermediaries and enable permissionless access to all kinds of financial operations. Ethereum \parencite{ethereum} laid the foundation for DeFi with programmable smart-contract. 
+
+Early applications included basic token swaps and asset issuance, but by 2018–2020 the space expanded significantly with protocols started offering decentralised marketplaces, lending/borrowing pools and automated market-making. This skyrocket in total value locked (TVL) across protocols was called “DeFi Summer” in 2020 and marked a turning point for DeFi \parencite{fang2021defi}.
+
+\textcite{hagele2024centralized} mentions that trading mechanisms broadly fall into two paradigms. One is the \textbf{automated market-maker (AMM)} or \textbf{constant-function market-maker (CFMM)} model, in which a deterministic pricing rule written in smart contract pools determine the amount and price users get. The alternate paradigm is a \textbf{central limit order book (CLOB)}, which organises outstanding limit buy and sell orders and matches them according to price‐time priority. 
+
+One of the earliest and most influential developments in the DeFi ecosystem was the launch of Uniswap (V1) in November 2018. Uniswap introduced the Automated Market-Maker (AMM) model where liquidity providers deposit assets into \textbf{smart contract pools} and trades are executed via a fixed formula (e.g., $xy = k$ or $x^3y^3=k$ ) instead of a conventional order book like in centralised exchanges (CEX). This innovation enabled anyone to create a trading pair without needing permission, dramatically lowering the barrier to decentralized asset exchange \parencite{adams2021uniswap}. Over time Uniswap evolved with enhancements like flash swaps, concentrated liquidity and composable hooks for more customisations.
+
+At the same time, this rapid growth exposed a number of systemic and security risks like flash-loan attacks, oracle failures, liquidity crises and governance exploits. This reminded users that decentralisation does not equate to security and smart contract security is integral to the ecosystem \parencite{kaur2023smart}. 
+
+\subsubsection{Central Limit Order Books (CLOB)}
+A \textbf{central limit order book (CLOB)} is a trading mechanism in which participants submit buy (“bid”) and sell (“ask”) orders specifying price and quantity, and these orders are stored in a queue in a book with bids sorted from highest to lowest price and asks from lowest to highest \parencite{hagele2024centralized}. Incoming orders are matched according to defined rules such as price-time priority, best price first and for orders at the same price, first come first served.
+Each order is a tuple 
+\[o_i = (p_i, q_i, s_i, t_i),\]
+consisting of a limit price \(p_i\), quantity \(q_i\), side \(s_i \in \{\text{buy}, \text{sell}\}\), and timestamp \(t_i\). Orders are stored in sorted lists according to \textit{price-time priority}:
+\[
+\mathcal{B} = \{o_i \mid s_i = \text{buy}\}, \quad 
+\mathcal{A} = \{o_j \mid s_j = \text{sell}\},
+\]
+where the bid set \(\mathcal{B}\) is sorted in descending order of price, and the ask set \(\mathcal{A}\) is sorted in ascending order. 
+
+A trade occurs when a new incoming order \(o_k\) satisfies the matching condition $p_k^{\text{buy}} \geq p_{\min}(\mathcal{A})  \quad\text{or}\quad p_k^{\text{sell}} \leq p_{\max}(\mathcal{B})$, in which case a transaction is executed at the \textbf{execution price} \(p^*\), typically equal to the price of the resting order at the top of the book. After execution, order quantities are updated as
+$q_i' = q_i - q_{\text{traded}}$,
+and any order with \(q_i' = 0\) is removed from the book.
+
+However, when implemented on-chain, the public visibility of \(\mathcal{A}\) and \(\mathcal{B}\) introduces information leakage, enabling front-running and other forms of miner extractable value (MEV), motivating research into privacy-preserving variants such as \textit{DePLOB}.
+
+CFMMs have dominated many DeFi platforms due to their simplicity and low transaction cost due to the gas efficient smart contracts. However with CLOB's advantages accompanied with lower transaction costs in blockchain from technical advances, this means that the CLOBs are now primed to reclaim their spot in DEXs.
+
+\subsection{Zero-Knowledge Proofs (ZKP)}
+
+A \textbf{zero-knowledge proof (ZKP)} is a cryptographic protocol by which one party (the \textit{prover}) convinces another party (the \textit{verifier}) that a certain statement is true, without revealing any additional information beyond the truth of the statement itself \parencite{hasan2019overview}.  
+Formally, let $\mathcal{R}$ be a relation such that $(x, w) \in \mathcal{R}$ if and only if the witness $w$ satisfies the statement $x$.  
+A ZKP allows the prover $\mathcal{P}$, who knows $w$, to convince the verifier $\mathcal{V}$ that there exists some $w$ such that $(x, w) \in \mathcal{R}$, denoted as:
+$$
+\text{ZKProof: } \mathcal{P}(x, w) \Rightarrow \mathcal{V}(x) \quad \text{s.t.} \quad (x, w) \in \mathcal{R}.
+$$
+
+The correctness and privacy of a ZKP are characterized by three key properties:
+
+\begin{enumerate}
+    \item \textbf{Completeness:} If $(x, w) \in \mathcal{R}$ and both parties follow the protocol honestly, then the verifier $\mathcal{V}$ always accepts the proof:
+    $$
+    \Pr[\mathcal{V} \text{ accepts } | (x, w) \in \mathcal{R}] = 1.
+    $$
+    
+    \item \textbf{Soundness:} If $(x, w) \notin \mathcal{R}$, then no probabilistic polynomial-time prover can convince $\mathcal{V}$ except with negligible probability $\varepsilon$:
+    $$
+    \Pr[\mathcal{V} \text{ accepts } | (x, w) \notin \mathcal{R}] \leq \varepsilon.
+    $$
+    
+    \item \textbf{Zero-Knowledge:} The verifier learns nothing beyond the validity of the statement.  
+    Formally, there exists a simulator $\mathcal{S}$ that can produce a transcript indistinguishable from a real interaction between $\mathcal{P}$ and $\mathcal{V}$:
+    $$
+    \text{Sim}(\mathcal{S}(x)) \approx \text{View}_{\mathcal{V}}(\mathcal{P}(x, w)).
+    $$
+\end{enumerate}
+
+ZKPs can be constructed in both \textit{interactive} and \textit{non-interactive} forms.  
+In an interactive proof, the verifier issues random challenges and the prover responds iteratively, ensuring the statement holds without revealing the witness.  
+In a non-interactive proof system, such as a zk-SNARK (\textit{Zero-Knowledge Succinct Non-Interactive Argument of Knowledge}), the prover generates a single compact proof $\pi$ that any verifier can check using a public verification key $\mathsf{vk}$:
+$$
+\text{Verify}(\mathsf{vk}, x, \pi) = 
+\begin{cases}
+1, & \text{if } \exists w : (x, w) \in \mathcal{R},\\
+0, & \text{otherwise.}
+\end{cases}
+$$
+
+Within blockchain and decentralized systems, ZKPs are used to enable \textit{privacy}, \textit{verifiability}, and \textit{efficiency}.  
+They allow validation of transactions or smart contract logic without revealing private inputs, ensuring that hidden data (such as identities or order details) still satisfy the protocol’s correctness constraints.  
+For example, privacy-focused cryptocurrencies like Zcash employ zk-SNARKs to prove that a transfer is valid without disclosing the sender, recipient, or amount.  
+Similarly, in privacy-preserving exchanges and shielded pools, ZKPs provide cryptographic guarantees that each hidden transaction maintains balance and consistency while preserving user anonymity \parencite{ding2025overview}.
+
+
+\subsection{Merkle Tree}
+A \textbf{Merkle tree} is a cryptographic data structure used to efficiently verify the integrity and membership of large data sets. Each leaf node in a Merkle tree represents the hash of a data block, while each non-leaf node stores the hash of its two child nodes. Given a sequence of data elements 
+$D = \{d_1, d_2, \dots, d_n\}$,
+the corresponding leaf nodes are computed as 
+$L_i = H(d_i)$, where $i \in [1, n]$ and $H(\cdot)$ denotes a cryptographic hash function.  
+Internal nodes are computed recursively as 
+$N_{i,j} = H(N_{i-1,2j-1} \, \| \, N_{i-1,2j})$, 
+and the topmost node represents the \textbf{Merkle root}, given by 
+$R = H(N_{h,1} \, \| \, N_{h,2})$, 
+where $h = \log_2 n$ is the height of the tree.  
+The Merkle root $R$ uniquely commits to all data blocks in $D$.
+
+This structure enables verification of individual elements through concise \textbf{Merkle proofs}.  
+To prove that a leaf $L_k$ is included in the tree, a verifier is given the set of sibling hashes $\{S_1, S_2, \dots, S_h\}$ along the path to the root.  
+The verifier recomputes the root as 
+
+\noindent $R' = H(\dots H(H(L_k \, \| \, S_1) \, \| \, S_2) \dots)$, 
+and checks that $R' = R$.  
+This proof requires $O(\log n)$ hashes, providing efficient inclusion verification without exposing the full data set.
+
+In smart contract systems, an \textbf{Incremental Merkle Tree} (IMT) is often used.  
+An IMT has a fixed depth where all leaves are initially zero values.  
+New non-zero leaves are added incrementally from the left-most to the right-most leaf, defined as  
+$L_i = H(d_i)$ if $d_i \neq 0$, and $L_i = 0$ otherwise.  
+This approach allows gas-efficient appends and on-chain verification, as only a small portion of the tree and its root need to be updated upon each insertion, reducing the transaction cost. 
+\parencite{rareskillsTornadoCash}
+
+\subsubsection{Nullifiers}
+
+A \textbf{nullifier} is a cryptographic primitive used to ensure uniqueness and prevent double-spending in privacy-preserving protocols that rely on Merkle tree commitments.  
+In general, users first generate a \textit{commitment} to a secret value derived from two randomly chosen parameters: a \textit{nullifier note} $n$ and a \textit{secret} $s$.  
+The commitment is defined as
+$$
+C = H(n \, \| \, s),
+$$
+where $H(\cdot)$ is a collision-resistant hash function and $\|$ denotes concatenation.  
+This commitment $C$ is then inserted as a leaf in a public Merkle tree $\mathcal{T}$, which compactly represents all past deposits or commitments via its Merkle root $R = \text{root}(\mathcal{T})$.  
+The root $R$ acts as a global state commitment that can be efficiently verified on-chain.
+
+At the time of withdrawal or spend, the user constructs a zero-knowledge proof (e.g., zk-SNARK) attesting that they know a valid leaf $C$ within $\mathcal{T}$ and that the associated nullifier has not been revealed before.  
+Formally, the proof asserts knowledge of $(n, s)$ such that
+$$
+H(n \, \| \, s) \in \mathcal{T}
+\quad \text{and} \quad
+\text{Nullifier} = H(n),
+$$
+without revealing the specific position of $C$ in $\mathcal{T}$.  
+The nullifier $H(n)$ thus serves as a one-time pseudonym: it allows the system to detect if a commitment has already been spent, while maintaining unlinkability between deposit and withdrawal events.
+
+Once a nullifier is revealed and recorded on-chain, any subsequent attempt to reuse the same nullifier is rejected, enforcing a \textbf{single-spend constraint}.  
+This property is crucial in shielded systems and privacy-preserving order books where hidden state transitions must remain verifiable yet untraceable.  
+Because the Merkle tree $\mathcal{T}$ is public while the mapping between leaves and users remains hidden, the combination of commitments, Merkle membership proofs, and nullifiers achieves both \textit{verifiable inclusion} and \textit{unlinkability}.  
+
+\subsection{Trusted Execution Environment (TEE)}
+
+A \textbf{Trusted Execution Environment (TEE)} is a hardware-enforced secure area within a processor that guarantees the confidentiality and integrity of code and data loaded inside it \parencite{sabt2015trusted}.  
+A TEE provides an isolated execution context, often referred to as an \textit{enclave}, in which computations are protected from interference or observation by the host operating system, hypervisor, or other applications.   This isolation is achieved through hardware primitives such as memory encryption, secure paging, and access control enforced at the CPU level.  
+
+Within the blockchain context, TEEs enable the off-chain execution of sensitive or private computations, such as decryption or signing with private key, while maintaining verifiability through \textbf{remote attestation}.  
+Remote attestation allows a TEE to produce a cryptographically signed statement proving that specific code was executed in an authentic enclave on genuine hardware, represented as:
+$$
+\sigma = \text{Sign}_{\text{TEE}}(H(\text{code}) \, \| \, H(\text{data})),
+$$
+where $\sigma$ serves as an attestation proof that can be verified on-chain to confirm correct and untampered execution. This property is particularly valuable for blockchain oracles and private smart contracts, where certain decryption or computation steps must remain hidden from the public state.
+
+By providing hardware-level isolation, TEEs reduce the need for complex multi-party cryptographic protocols and simplify system design when confidentiality and verifiability must coexist.  
+However, TEEs inherently depend on the integrity of the underlying hardware vendor’s trust chain, including firmware, attestation services, and key provisioning.  
+They are also subject to known limitations such as side-channel attacks, speculative execution leaks, and rollback vulnerabilities.  
+Consequently, while TEEs can provide strong practical security assurances, their use in decentralized settings typically requires complementary cryptographic proofs or redundancy mechanisms to mitigate single-point trust dependencies.
+
+
+\section{Related Work}
+\subsection{Tornado Cash}
+\textit{Tornado Cash} (henceforth \textit{Tornado}) was launched by \textcite{pertsev2019tornado} and is one of the earliest and most widely used privacy protocols on the Ethereum network. It is a non custodial mixer where users can deposit a fixed denomination of Ether and allows withdrawal to a different address with no reference to the deposit address. 
+
+It introduces a concept of a \textbf{shielded pool} in blockchain where once any cryptocurrency enters the shielded pool, it can no longer be tracked until after exiting the pool.
+
+There are some limitations where heuristics like first-in-first-out correlation can undermine the anonymity. In fact, \textcite{tang2021analysis} was able to apply clustering heuristics to \textit{Tornado} data and demonstrate that a non-trivial fraction of addresses can be linked from deposit to withdrawal patterns, reducing effective anonymity. Nevertheless, \textit{Tornado} still serves as the foundational reference for privacy-preserving on-chain protocols. 
+
+\subsection{COMMON}
+\textit{COMMON} is a privacy-preserving on-chain order-book protocol designed to bring private trading to decentralized exchanges with \textbf{multi party computation (MPC)} and zk-SNARKS. It uses the same shielded pool as Tornado where users deposit assets into, then submit encrypted orders that are matched off-chain and subsequently decrypted by a decryption oracle for on-chain settlement \parencite{cryptoeprint:2023/1868}. The architecture is a CLOB where users may place limit orders, cancel them, and maintain private order-book depth while hiding key metadata such as trader identity, order sizes and order book state. 
+
+\textit{COMMON}’s life cycle proceeds in four phases. First users deposit into the shielded pool, where each user’s funds become indistinguishable. Secondly users submit an encrypted order, which remain concealed until matched. Third is the order matching where an MPC-based decryption oracle will decrypt the orders and match using a matching engine. This matching process is verifiable similar to how an on-chain perpetuals DEX Lighter integrates verifiability into the matching engine \parencite{lighter2025protocol}. Lastly, users can then verify themselves using their initial deposit nullifier to withdraw their swapped assets from the shielded pool on an unlinked address. 
+
+Despite its innovation, \textit{COMMON} also presents important limitations. First, it relies on a MPC-based decryption oracle, which introduces trust and coordination assumptions. Second, although the design supports full CLOB semantics, in practice the anonymity set of the pool and behavioural aspects (e.g., order timing, address reuse) can degrade privacy guarantees unless large participation or proper user behaviour is sustained. Lastly, there is a lack of multi token order matching in the matching engine which would lead to fragmented liquidity. 
+
+\textit{COMMON} is the closest ideation of a private limit order book and would be used as a basis for \textit{DePLOB}.
+
+\subsection{Recurring Limitations}
+Existing privacy-preserving decentralized exchanges such as \textit{Rialto} \parencite{govindarajan2022rialto}, \textit{BlockAuction} \cite{constantinides2021blockauction}, \textit{Renegade} \parencite{bender2024renegade}, and \textit{COMMON} \parencite{cryptoeprint:2023/1868} demonstrate significant advances in secure order matching and confidential trading. However, recurring limitations remain in terms of scalability, decentralization, and usability. 
+
+\subsubsection{Centralized Trust in Matching or Decryption Entities}
+Many existing systems depend on a small set of trusted MPC nodes or a single decryption oracle to reveal and match orders. These participation sets are often fixed like in \textit{Rialto} or \textit{BlockAuction} and they represent single points of failure as any collusion or key compromise can bias outcomes or leak trade data. Such dependence on static, semi-trusted intermediaries conflicts with the permissionless nature of DeFi.
+
+\subsubsection{Batch-Based}
+Protocols such as \textit{Rialto} and \textit{COMMON} rely on batch-based auctions or matching rounds to maintain anonymity. While effective for obfuscating trade intent, this architecture introduces multi-block latency and prevents real-time execution. Orders remain locked until the next batch, discouraging active trading strategies and reducing liquidity responsiveness. 
+
+\subsubsection{Lack of Multi-Token and Routing Support}
+Most dark-pool DEXs are designed around a single-asset pair, maintaining separate private pools for each market. This fragmentation prevents efficient liquidity routing across pairs and leads to poor capital utilization as traders must maintain multiple deposits and commitments across isolated pools.
+
+\section{DePLOB}
+\subsection{Problem Formulation}
+Given the recurring limitations identified in existing dark-pool DEX protocols, there remains a clear need for a privacy-preserving decentralized exchange that mitigates front-running, information leakage, and centralization risks. To address this gap, I propose \textit{DePLOB} (Decentralized Private Limit Order Book), a protocol designed to enable confidential yet verifiable trading on public blockchains. 
+
+\textit{DePLOB} will integrate a \textbf{shielded pool} system powered by \textbf{zk-SNARKS} to anonymize user balances and transactions, a \textbf{TEE-based} matching engine to perform secure order matching off-chain. Furthermore, \textit{DePLOB} will support multi-token trading, allowing the matching engine to route and settle orders across multiple asset pairs while preserving transactional privacy and integrity. As a reach goal, \textit{DePLOB} will allow any participant to join a network of TEE Nodes that execute the matching logic bringing more decentralisation.
+
+\subsection{Progress Made So Far}
+During the current semester, the focus of this project has primarily been on conducting background study and literature review to establish the foundation for the design of a privacy-preserving DEX. This involved analysing existing dark-pool protocols such as \textit{Rialto}, \textit{COMMON}, \textit{Renegade}, and \textit{BlockAuction}, as well as examining underlying cryptographic primitives including zero-knowledge proofs, commitment schemes, and trusted execution environments (TEEs). The literature review phase has clarified the trade-offs between privacy, verifiability, and decentralization, which has directly informed the design choices made for \textit{DePLOB}.
+
+\subsubsection{System Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{system-design.png}
+    \caption{System Design}
+    \label{fig:system_design}
+\end{figure}
+
+An initial system design has been developed to outline the core components of the proposed protocol. The design includes a smart contract layer with a shielded pool that allows 4 functions: token deposits and withdrawals, order creation and cancellation using nullifier-commitment schemes with an incremental Merkle Tree similar to \textit{Tornado}. 
+
+This smart contract will be paired with a zero-knowledge circuit smart contract to prove the different actions made by the user anonymously. The TEE-based matching engine will responsible for confidential order decryption, matching, and settlement. These three modules in the system collectively ensure that user balances remain private while order execution remains verifiable.
+
+At this stage, the focus has been on defining the interaction between these components, specifying the data structures, and identifying the proof relations required for order validity and balance consistency. 
+
+\subsection{Plan Next Semester}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{gantt-chart.png}
+    \caption{Gantt Chart By Weeks}
+    \label{fig:gant_chart}
+\end{figure}
+Next semester will be focused on the detailed implementation of each subsystem following the gantt chart closely. including the construction of the shielded pool smart contract in solidity, the TEE enclave powered order matching engine, and the development of the necessary zero-knowledge circuits for user operations. 
+
+All the components will be integrated to produce a minimum viable version of \textit{DePLOB} in action, demonstrating deposit, withdraw, order creation, cancellation and matched orders. The correctness and performance will then be evaluated.
+
+\nocite{*}
+\printbibliography
+\end{document}
+
+
+Add leading header for of the paragraph
+% \noident \textbf{Goal.} 
+% \textit for certain part
