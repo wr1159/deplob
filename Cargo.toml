@@ -1,0 +1,46 @@
+[workspace]
+resolver = "2"
+members = [
+    "sp1-programs/deposit/program",
+    "sp1-programs/deposit/script",
+    "sp1-programs/withdraw/program",
+    "sp1-programs/withdraw/script",
+    "sp1-programs/create-order/program",
+    "sp1-programs/create-order/script",
+    "sp1-programs/cancel-order/program",
+    "sp1-programs/cancel-order/script",
+    "sp1-programs/lib/deplob-core",
+    "tee",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+# SP1
+sp1-zkvm = "3.0.0"
+sp1-sdk = "3.0.0"
+sp1-helper = "3.0.0"
+
+# Alloy (Ethereum types)
+alloy-primitives = "0.8"
+alloy-sol-types = "0.8"
+
+# Crypto
+sha2 = "0.10"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"
+hex = "0.4"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+
+anyhow = "1.0"
+thiserror = "1.0"
