@@ -3,6 +3,7 @@
 ## Overview
 
 Build the foundational smart contracts using Foundry:
+
 1. Incremental Merkle Tree
 2. SP1 Verifier integration
 3. Base DePLOB contract structure

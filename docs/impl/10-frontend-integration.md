@@ -3,6 +3,7 @@
 ## Overview
 
 Build a React frontend that:
+
 1. Connects to user wallets
 2. Generates ZK proofs (via backend service)
 3. Interacts with DePLOB contracts

@@ -3,6 +3,7 @@
 ## Overview
 
 The withdrawal system allows users to:
+
 1. Prove knowledge of a valid deposit commitment
 2. Reveal a nullifier (without linking to deposit)
 3. Withdraw tokens to any address

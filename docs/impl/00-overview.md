@@ -60,6 +60,7 @@ deplob/
 ## Implementation Phases
 
 ### Phase 1: Foundation (Weeks 1-2)
+
 | Step | Document | Description |
 |------|----------|-------------|
 | 1 | [01-environment-setup.md](./01-environment-setup.md) | Foundry, SP1, Rust toolchain |
@@ -67,6 +68,7 @@ deplob/
 | 3 | [03-smart-contract-foundation.md](./03-smart-contract-foundation.md) | Foundry project, Merkle tree, base contracts |
 
 ### Phase 2: Core Operations (Weeks 3-5)
+
 | Step | Document | Description |
 |------|----------|-------------|
 | 4 | [04-deposit-system.md](./04-deposit-system.md) | SP1 deposit program + contract |
@@ -75,11 +77,13 @@ deplob/
 | 7 | [07-order-cancellation.md](./07-order-cancellation.md) | SP1 order cancellation + contract |
 
 ### Phase 3: Matching Engine (Weeks 6-8)
+
 | Step | Document | Description |
 |------|----------|-------------|
 | 8 | [08-order-matching.md](./08-order-matching.md) | TEE matching + settlement proofs |
 
 ### Phase 4: Integration (Weeks 9-10)
+
 | Step | Document | Description |
 |------|----------|-------------|
 | 9 | [09-testing.md](./09-testing.md) | Foundry tests, SP1 tests, E2E |
@@ -134,6 +138,7 @@ fn main() {
 ## Key Dependencies
 
 ### Rust Workspace (Cargo.toml)
+
 ```toml
 [workspace]
 members = [
@@ -154,6 +159,7 @@ tiny-keccak = { version = "2.0", features = ["keccak"] }
 ```
 
 ### Foundry (foundry.toml)
+
 ```toml
 [profile.default]
 src = "src"
@@ -185,31 +191,37 @@ sp1-contracts = "2.0.0"
 ## Milestones Checklist
 
 ### M1: Environment Ready
+
 - [ ] Foundry installed and project initialized
 - [ ] SP1 toolchain installed
 - [ ] Sample SP1 program compiles and proves
 
 ### M2: Contracts Deployed
+
 - [ ] MerkleTree contract tested
 - [ ] SP1Verifier integrated
 - [ ] DePLOB contract deployed to testnet
 
 ### M3: Deposit/Withdraw Working
+
 - [ ] Deposit SP1 program complete
 - [ ] Withdraw SP1 program complete
 - [ ] End-to-end deposit → withdraw works
 
 ### M4: Orders Working
+
 - [ ] Create order SP1 program complete
 - [ ] Cancel order SP1 program complete
 - [ ] TEE receives encrypted orders
 
 ### M5: Matching Working
+
 - [ ] TEE matches orders correctly
 - [ ] Settlement proofs generated
 - [ ] On-chain settlement verified
 
 ### M6: Frontend Complete
+
 - [ ] Wallet connection works
 - [ ] Can deposit/withdraw via UI
 - [ ] Order creation UI works

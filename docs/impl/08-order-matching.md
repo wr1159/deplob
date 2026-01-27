@@ -3,6 +3,7 @@
 ## Overview
 
 The TEE-based matching engine:
+
 1. Receives encrypted orders from contract events
 2. Decrypts and validates orders
 3. Maintains private order book

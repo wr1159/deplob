@@ -556,6 +556,7 @@ mod tests {
 ```
 
 Add to `Cargo.toml` workspace dependencies:
+
 ```toml
 aes-gcm = "0.10"
 rand = "0.8"

@@ -3,6 +3,7 @@
 ## Overview
 
 The order cancellation system allows users to:
+
 1. Cancel an existing order
 2. Unlock the deposit for withdrawal or new orders
 3. Notify the TEE to remove the order from the book

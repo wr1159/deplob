@@ -200,6 +200,7 @@ forge-std/=lib/forge-std/src/
 Test the SP1 setup with a simple program.
 
 `sp1-programs/deposit/program/Cargo.toml`:
+
 ```toml
 [package]
 name = "deposit-program"
@@ -212,6 +213,7 @@ deplob-core = { path = "../../lib/deplob-core" }
 ```
 
 `sp1-programs/deposit/program/src/main.rs`:
+
 ```rust
 //! Deposit Program - proves valid commitment creation
 #![no_main]
@@ -230,6 +232,7 @@ pub fn main() {
 ```
 
 `sp1-programs/deposit/script/Cargo.toml`:
+
 ```toml
 [package]
 name = "deposit-script"
@@ -246,6 +249,7 @@ sp1-helper = { workspace = true }
 ```
 
 `sp1-programs/deposit/script/build.rs`:
+
 ```rust
 fn main() {
     sp1_helper::build_program("../program");
@@ -253,6 +257,7 @@ fn main() {
 ```
 
 `sp1-programs/deposit/script/src/main.rs`:
+
 ```rust
 use sp1_sdk::{ProverClient, SP1Stdin};
 
@@ -284,6 +289,7 @@ fn main() -> anyhow::Result<()> {
 ```
 
 `sp1-programs/lib/deplob-core/Cargo.toml`:
+
 ```toml
 [package]
 name = "deplob-core"
@@ -295,6 +301,7 @@ serde = { workspace = true }
 ```
 
 `sp1-programs/lib/deplob-core/src/lib.rs`:
+
 ```rust
 //! Shared types and utilities for DePLOB SP1 programs
 
@@ -355,6 +362,7 @@ SP1_PRIVATE_KEY=your_sp1_network_key
 ```
 
 Add to `.gitignore`:
+
 ```
 .env
 out/
@@ -365,8 +373,8 @@ node_modules/
 
 ## 1.10 Verify Setup Checklist
 
-- [ ] `rustc --version` shows 1.75+
-- [ ] `forge --version` shows 0.2+
+- [x] `rustc --version` shows 1.75+
+- [x] `forge --version` shows 0.2+
 - [ ] `cargo prove --version` works
 - [ ] SP1 sample program compiles: `cargo prove build`
 - [ ] SP1 sample script runs: `cargo run --release`
@@ -376,6 +384,7 @@ node_modules/
 ## Troubleshooting
 
 ### SP1 Build Fails
+
 ```bash
 # Ensure RISC-V target is installed
 rustup target add riscv32im-unknown-none-elf
@@ -386,12 +395,14 @@ cargo prove build
 ```
 
 ### Foundry Remappings Issue
+
 ```bash
 # Regenerate remappings
 forge remappings > remappings.txt
 ```
 
 ### Out of Memory During Proving
+
 ```bash
 # SP1 proving needs significant RAM
 # Use network prover for large programs

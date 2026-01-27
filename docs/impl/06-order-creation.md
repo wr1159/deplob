@@ -3,6 +3,7 @@
 ## Overview
 
 The order creation system allows users to:
+
 1. Create an encrypted limit order backed by a deposit
 2. Prove ownership of the deposit without revealing it
 3. Submit the encrypted order to the TEE via the smart contract

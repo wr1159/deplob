@@ -3,6 +3,7 @@
 ## Overview
 
 The deposit system allows users to:
+
 1. Generate a commitment hiding their deposit details
 2. Create an SP1 proof of valid commitment
 3. Deposit tokens into the shielded pool
