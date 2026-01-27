@@ -375,11 +375,11 @@ node_modules/
 
 - [x] `rustc --version` shows 1.75+
 - [x] `forge --version` shows 0.2+
-- [ ] `cargo prove --version` works
-- [ ] SP1 sample program compiles: `cargo prove build`
-- [ ] SP1 sample script runs: `cargo run --release`
-- [ ] Foundry compiles: `forge build`
-- [ ] Foundry tests pass: `forge test`
+- [x] `cargo prove --version` works
+- [x] SP1 sample program compiles: `cargo prove build`
+- [x] SP1 sample script runs: `cargo run --release`
+- [x] Foundry compiles: `forge build`
+- [x] Foundry tests pass: `forge test`
 
 ## Troubleshooting
 

@@ -1,0 +1,8 @@
+[package]
+name = "deposit-program"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = { workspace = true }
+deplob-core = { path = "../../lib/deplob-core" }
