@@ -44,10 +44,7 @@ contract DepositE2ETest is Test {
 
         deplob = new DePLOB(
             address(verifier),
-            bytes32(uint256(1)), // deposit vkey placeholder
             bytes32(uint256(2)), // withdraw vkey
-            bytes32(uint256(3)), // create order vkey
-            bytes32(uint256(4)), // cancel order vkey
             teeOperator
         );
 
@@ -70,7 +67,7 @@ contract DepositE2ETest is Test {
         uint256 amount = 100 ether;
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, ""); // empty proof
+        deplob.deposit(commitment, address(token), amount); // empty proof
 
         assertEq(token.balanceOf(address(deplob)), amount);
         assertTrue(deplob.isKnownRoot(deplob.getLastRoot()));
@@ -103,17 +100,14 @@ contract DepositE2ETest is Test {
 
         // Extract values from JSON
         bytes32 commitment = vm.parseJsonBytes32(jsonStr, ".commitment");
-        string memory vkeyStr = vm.parseJsonString(jsonStr, ".vkey");
-
-        console.log("SP1-generated commitment:");
+        console.log("Commitment from deposit note generator:");
         console.logBytes32(commitment);
-        console.log("Verification key:", vkeyStr);
 
         // Use the real commitment from SP1 execution!
         uint256 amount = 1 ether; // Match the amount from generate_test_data (1e18 wei)
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, ""); // empty proof for mock verifier
+        deplob.deposit(commitment, address(token), amount); // empty proof for mock verifier
 
         assertEq(token.balanceOf(address(deplob)), amount);
         console.log("Deposit successful with SP1-generated commitment!");
@@ -128,7 +122,8 @@ contract DepositE2ETest is Test {
     ///      This creates deposit_proof.bin, deposit_public_values.bin, deposit_vkey.txt
     function test_DepositWithPreGeneratedProof() public {
         // Check if proof files exist
-        string memory proofPath = "../sp1-programs/deposit/script/deposit_proof.bin";
+        string
+            memory proofPath = "../sp1-programs/deposit/script/deposit_proof.bin";
 
         // Try to read proof file
         try vm.readFileBinary(proofPath) returns (bytes memory proof) {
@@ -138,7 +133,7 @@ contract DepositE2ETest is Test {
             );
 
             // Decode public values (commitment, token, amount)
-            (bytes32 commitment, address tokenAddr, uint256 amount) = abi.decode(
+            (bytes32 commitment /*tokenAddr*/, , uint256 amount) = abi.decode(
                 publicValues,
                 (bytes32, address, uint256)
             );
@@ -150,19 +145,21 @@ contract DepositE2ETest is Test {
             // For real verification, you'd deploy the actual SP1Verifier
             // For now, use mock (which accepts empty proofs)
             vm.prank(alice);
-            deplob.deposit(commitment, address(token), amount, "");
+            deplob.deposit(commitment, address(token), amount);
 
             assertEq(token.balanceOf(address(deplob)), amount);
         } catch {
             console.log("Skipping - no pre-generated proof found");
-            console.log("Generate with: GENERATE_PROOF=true cargo run --release");
+            console.log(
+                "Generate with: GENERATE_PROOF=true cargo run --release"
+            );
 
             // Fallback to mock test
             bytes32 commitment = keccak256("fallback");
             uint256 amount = 50 ether;
 
             vm.prank(alice);
-            deplob.deposit(commitment, address(token), amount, "");
+            deplob.deposit(commitment, address(token), amount);
         }
     }
 
@@ -184,7 +181,15 @@ contract DepositE2ETest is Test {
         // Amount as 32 bytes (already uint256 in Solidity)
         bytes32 amountPadded = bytes32(amount);
 
-        return keccak256(abi.encodePacked(nullifierNote, secret, tokenPadded, amountPadded));
+        return
+            keccak256(
+                abi.encodePacked(
+                    nullifierNote,
+                    secret,
+                    tokenPadded,
+                    amountPadded
+                )
+            );
     }
 
     /// @notice Test that Solidity commitment matches Rust
@@ -194,7 +199,12 @@ contract DepositE2ETest is Test {
         address tokenAddr = address(0xABaBaBaBABabABabAbAbABAbABabababaBaBABaB);
         uint256 amount = 1 ether;
 
-        bytes32 commitment = computeCommitment(nullifierNote, secret, tokenAddr, amount);
+        bytes32 commitment = computeCommitment(
+            nullifierNote,
+            secret,
+            tokenAddr,
+            amount
+        );
 
         // This should match what the Rust program computes
         // You can verify by running the Rust script with the same inputs

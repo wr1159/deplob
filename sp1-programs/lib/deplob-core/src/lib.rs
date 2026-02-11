@@ -39,5 +39,12 @@ pub mod merkle;
 
 // Re-export commonly used types
 pub use commitment::{Commitment, CommitmentPreimage, Nullifier};
-pub use keccak::{keccak256, keccak256_pair, keccak256_concat, address_to_bytes32, u128_to_bytes32};
-pub use merkle::{IncrementalMerkleTree, MerkleProof, TREE_DEPTH, ZERO_VALUE};
+pub use keccak::{
+    address_to_bytes32, keccak256, keccak256_concat, keccak256_pair, u128_to_bytes32,
+};
+pub use merkle::{zero_hashes, IncrementalMerkleTree, MerkleProof, TREE_DEPTH, ZERO_VALUE};
+
+/// Alias for keccak256_pair for convenience
+pub fn hash_pair(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
+    keccak256_pair(left, right)
+}

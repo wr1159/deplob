@@ -39,15 +39,13 @@ interface IDePLOB {
     // ============ Deposit ============
 
     /// @notice Deposit tokens into shielded pool
-    /// @param commitment The commitment hash
+    /// @param commitment The commitment hash (keccak256 of nullifier_note||secret||token||amount)
     /// @param token The token address
     /// @param amount The amount to deposit
-    /// @param proof The SP1 proof
     function deposit(
         bytes32 commitment,
         address token,
-        uint256 amount,
-        bytes calldata proof
+        uint256 amount
     ) external;
 
     // ============ Withdrawal ============
@@ -70,26 +68,22 @@ interface IDePLOB {
 
     // ============ Orders ============
 
-    /// @notice Create a new encrypted order
+    /// @notice Create a new encrypted order (TEE only)
     /// @param orderCommitment The order commitment
     /// @param depositNullifier The nullifier of the deposit backing the order
     /// @param encryptedOrder The encrypted order data for TEE
-    /// @param proof The SP1 proof
     function createOrder(
         bytes32 orderCommitment,
         bytes32 depositNullifier,
-        bytes calldata encryptedOrder,
-        bytes calldata proof
+        bytes calldata encryptedOrder
     ) external;
 
-    /// @notice Cancel an existing order
+    /// @notice Cancel an existing order (TEE only)
     /// @param orderNullifier The order nullifier
     /// @param orderCommitment The order commitment
-    /// @param proof The SP1 proof
     function cancelOrder(
         bytes32 orderNullifier,
-        bytes32 orderCommitment,
-        bytes calldata proof
+        bytes32 orderCommitment
     ) external;
 
     // ============ Settlement (TEE only) ============

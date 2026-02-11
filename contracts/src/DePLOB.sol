@@ -16,11 +16,8 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
 
     // ============ Constants ============
 
-    /// @notice SP1 program verification keys
-    bytes32 public immutable DEPOSIT_VKEY;
+    /// @notice SP1 program verification key (withdrawal only)
     bytes32 public immutable WITHDRAW_VKEY;
-    bytes32 public immutable CREATE_ORDER_VKEY;
-    bytes32 public immutable CANCEL_ORDER_VKEY;
 
     // ============ State Variables ============
 
@@ -64,17 +61,11 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
 
     constructor(
         address _verifier,
-        bytes32 _depositVKey,
         bytes32 _withdrawVKey,
-        bytes32 _createOrderVKey,
-        bytes32 _cancelOrderVKey,
         address _teeOperator
     ) {
         verifier = ISP1Verifier(_verifier);
-        DEPOSIT_VKEY = _depositVKey;
         WITHDRAW_VKEY = _withdrawVKey;
-        CREATE_ORDER_VKEY = _createOrderVKey;
-        CANCEL_ORDER_VKEY = _cancelOrderVKey;
         teeOperator = _teeOperator;
         owner = msg.sender;
     }
@@ -108,16 +99,11 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
     function deposit(
         bytes32 commitment,
         address token,
-        uint256 amount,
-        bytes calldata proof
+        uint256 amount
     ) external nonReentrant {
         require(supportedTokens[token], "Token not supported");
         require(!commitments[commitment], "Commitment already exists");
         require(amount > 0, "Amount must be positive");
-
-        // Verify SP1 proof
-        bytes memory publicValues = abi.encode(commitment, token, amount);
-        verifier.verifyProof(DEPOSIT_VKEY, publicValues, proof);
 
         // Transfer tokens to contract
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -169,20 +155,12 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
     function createOrder(
         bytes32 orderCommitment,
         bytes32 depositNullifier,
-        bytes calldata encryptedOrder,
-        bytes calldata proof
-    ) external nonReentrant {
+        bytes calldata encryptedOrder
+    ) external onlyTEE nonReentrant {
         require(
             !orderNullifiers[depositNullifier],
             "Deposit already used for order"
         );
-
-        // Verify SP1 proof
-        bytes memory publicValues = abi.encode(
-            orderCommitment,
-            depositNullifier
-        );
-        verifier.verifyProof(CREATE_ORDER_VKEY, publicValues, proof);
 
         // Mark deposit as locked for order
         orderNullifiers[depositNullifier] = true;
@@ -195,14 +173,9 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
     /// @inheritdoc IDePLOB
     function cancelOrder(
         bytes32 orderNullifier,
-        bytes32 orderCommitment,
-        bytes calldata proof
-    ) external nonReentrant {
+        bytes32 /* orderCommitment */
+    ) external onlyTEE nonReentrant {
         require(!cancelledOrders[orderNullifier], "Order already cancelled");
-
-        // Verify SP1 proof
-        bytes memory publicValues = abi.encode(orderNullifier, orderCommitment);
-        verifier.verifyProof(CANCEL_ORDER_VKEY, publicValues, proof);
 
         // Mark order as cancelled
         cancelledOrders[orderNullifier] = true;

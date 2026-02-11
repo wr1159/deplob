@@ -17,23 +17,13 @@ contract DePLOBTest is Test {
     address public teeOperator = makeAddr("tee");
     address public deployer;
 
-    bytes32 constant DEPOSIT_VKEY = bytes32(uint256(1));
     bytes32 constant WITHDRAW_VKEY = bytes32(uint256(2));
-    bytes32 constant CREATE_ORDER_VKEY = bytes32(uint256(3));
-    bytes32 constant CANCEL_ORDER_VKEY = bytes32(uint256(4));
 
     function setUp() public {
         deployer = address(this);
 
         verifier = new MockSP1Verifier();
-        deplob = new DePLOB(
-            address(verifier),
-            DEPOSIT_VKEY,
-            WITHDRAW_VKEY,
-            CREATE_ORDER_VKEY,
-            CANCEL_ORDER_VKEY,
-            teeOperator
-        );
+        deplob = new DePLOB(address(verifier), WITHDRAW_VKEY, teeOperator);
 
         token = new ERC20Mock("Test Token", "TEST");
 
@@ -56,7 +46,7 @@ contract DePLOBTest is Test {
         uint256 amount = 100 ether;
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), amount);
 
         // Verify state
         assertTrue(deplob.isKnownRoot(deplob.getLastRoot()));
@@ -72,7 +62,7 @@ contract DePLOBTest is Test {
         emit IDePLOB.Deposit(commitment, 0, block.timestamp);
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), amount);
     }
 
     function test_DepositRevertsOnDuplicateCommitment() public {
@@ -80,11 +70,11 @@ contract DePLOBTest is Test {
         uint256 amount = 100 ether;
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), amount);
 
         vm.prank(bob);
         vm.expectRevert("Commitment already exists");
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), amount);
     }
 
     function test_DepositRevertsOnUnsupportedToken() public {
@@ -93,7 +83,7 @@ contract DePLOBTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("Token not supported");
-        deplob.deposit(commitment, address(unsupportedToken), 100 ether, "");
+        deplob.deposit(commitment, address(unsupportedToken), 100 ether);
     }
 
     function test_DepositRevertsOnZeroAmount() public {
@@ -101,18 +91,7 @@ contract DePLOBTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("Amount must be positive");
-        deplob.deposit(commitment, address(token), 0, "");
-    }
-
-    function test_DepositRevertsOnFailedProof() public {
-        verifier.setShouldPass(false);
-
-        bytes32 commitment = keccak256("test commitment");
-        uint256 amount = 100 ether;
-
-        vm.prank(alice);
-        vm.expectRevert("Proof verification failed");
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), 0);
     }
 
     // ============ Withdrawal Tests ============
@@ -123,13 +102,20 @@ contract DePLOBTest is Test {
         uint256 amount = 100 ether;
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), amount);
 
         // Then withdraw
         bytes32 nullifier = keccak256("nullifier");
         bytes32 root = deplob.getLastRoot();
 
-        deplob.withdraw(nullifier, payable(bob), address(token), amount, root, "");
+        deplob.withdraw(
+            nullifier,
+            payable(bob),
+            address(token),
+            amount,
+            root,
+            ""
+        );
 
         // Verify state
         assertTrue(deplob.isSpentNullifier(nullifier));
@@ -143,24 +129,38 @@ contract DePLOBTest is Test {
         uint256 amount = 100 ether;
 
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), amount, "");
+        deplob.deposit(commitment, address(token), amount);
 
         // First withdraw succeeds
         bytes32 nullifier = keccak256("nullifier");
         bytes32 root = deplob.getLastRoot();
 
-        deplob.withdraw(nullifier, payable(bob), address(token), amount, root, "");
+        deplob.withdraw(
+            nullifier,
+            payable(bob),
+            address(token),
+            amount,
+            root,
+            ""
+        );
 
         // Deposit more
         token.mint(alice, 100 ether);
         bytes32 commitment2 = keccak256("test commitment 2");
         vm.prank(alice);
-        deplob.deposit(commitment2, address(token), amount, "");
+        deplob.deposit(commitment2, address(token), amount);
 
         // Second withdraw with same nullifier fails
         bytes32 newRoot = deplob.getLastRoot();
         vm.expectRevert("Nullifier already spent");
-        deplob.withdraw(nullifier, payable(bob), address(token), amount, newRoot, "");
+        deplob.withdraw(
+            nullifier,
+            payable(bob),
+            address(token),
+            amount,
+            newRoot,
+            ""
+        );
     }
 
     function test_WithdrawRevertsOnUnknownRoot() public {
@@ -168,7 +168,14 @@ contract DePLOBTest is Test {
         bytes32 fakeRoot = keccak256("fake root");
 
         vm.expectRevert("Unknown root");
-        deplob.withdraw(nullifier, payable(alice), address(token), 100 ether, fakeRoot, "");
+        deplob.withdraw(
+            nullifier,
+            payable(alice),
+            address(token),
+            100 ether,
+            fakeRoot,
+            ""
+        );
     }
 
     // ============ Order Tests ============
@@ -179,9 +186,20 @@ contract DePLOBTest is Test {
         bytes memory encryptedOrder = "encrypted data";
 
         vm.expectEmit(true, false, false, true);
-        emit IDePLOB.OrderCreated(orderCommitment, encryptedOrder, block.timestamp);
+        emit IDePLOB.OrderCreated(
+            orderCommitment,
+            encryptedOrder,
+            block.timestamp
+        );
 
-        deplob.createOrder(orderCommitment, depositNullifier, encryptedOrder, "");
+        vm.prank(teeOperator);
+        deplob.createOrder(orderCommitment, depositNullifier, encryptedOrder);
+    }
+
+    function test_CreateOrderRevertsOnlyTEE() public {
+        vm.prank(alice);
+        vm.expectRevert("Not TEE operator");
+        deplob.createOrder(keccak256("commitment"), keccak256("nullifier"), "");
     }
 
     function test_CreateOrderRevertsOnDuplicateDeposit() public {
@@ -189,10 +207,12 @@ contract DePLOBTest is Test {
         bytes32 orderCommitment2 = keccak256("order commitment 2");
         bytes32 depositNullifier = keccak256("deposit nullifier");
 
-        deplob.createOrder(orderCommitment1, depositNullifier, "", "");
+        vm.prank(teeOperator);
+        deplob.createOrder(orderCommitment1, depositNullifier, "");
 
+        vm.prank(teeOperator);
         vm.expectRevert("Deposit already used for order");
-        deplob.createOrder(orderCommitment2, depositNullifier, "", "");
+        deplob.createOrder(orderCommitment2, depositNullifier, "");
     }
 
     function test_CancelOrder() public {
@@ -202,17 +222,26 @@ contract DePLOBTest is Test {
         vm.expectEmit(true, false, false, true);
         emit IDePLOB.OrderCancelled(orderNullifier, block.timestamp);
 
-        deplob.cancelOrder(orderNullifier, orderCommitment, "");
+        vm.prank(teeOperator);
+        deplob.cancelOrder(orderNullifier, orderCommitment);
+    }
+
+    function test_CancelOrderRevertsOnlyTEE() public {
+        vm.prank(alice);
+        vm.expectRevert("Not TEE operator");
+        deplob.cancelOrder(keccak256("nullifier"), keccak256("commitment"));
     }
 
     function test_CancelOrderRevertsOnDoubleCancellation() public {
         bytes32 orderNullifier = keccak256("order nullifier");
         bytes32 orderCommitment = keccak256("order commitment");
 
-        deplob.cancelOrder(orderNullifier, orderCommitment, "");
+        vm.prank(teeOperator);
+        deplob.cancelOrder(orderNullifier, orderCommitment);
 
+        vm.prank(teeOperator);
         vm.expectRevert("Order already cancelled");
-        deplob.cancelOrder(orderNullifier, orderCommitment, "");
+        deplob.cancelOrder(orderNullifier, orderCommitment);
     }
 
     // ============ Settlement Tests ============
@@ -238,7 +267,11 @@ contract DePLOBTest is Test {
 
         vm.prank(teeOperator);
         vm.expectEmit(true, true, false, true);
-        emit IDePLOB.TradeSettled(buyerNewCommitment, sellerNewCommitment, block.timestamp);
+        emit IDePLOB.TradeSettled(
+            buyerNewCommitment,
+            sellerNewCommitment,
+            block.timestamp
+        );
 
         deplob.settleMatch(
             buyerNullifier,
@@ -342,7 +375,7 @@ contract DePLOBTest is Test {
         // Insert a commitment
         bytes32 commitment = keccak256("commitment");
         vm.prank(alice);
-        deplob.deposit(commitment, address(token), 100 ether, "");
+        deplob.deposit(commitment, address(token), 100 ether);
 
         bytes32 newRoot = deplob.getLastRoot();
         assertTrue(deplob.isKnownRoot(newRoot));

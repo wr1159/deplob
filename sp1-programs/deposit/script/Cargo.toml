@@ -12,15 +12,9 @@ name = "generate_test_data"
 path = "src/bin/generate_test_data.rs"
 
 [dependencies]
-sp1-sdk = { workspace = true }
-alloy-primitives = { workspace = true }
-alloy-sol-types = { workspace = true }
-serde = { workspace = true }
+deplob-core = { path = "../../lib/deplob-core" }
 serde_json = "1.0"
+serde = { workspace = true }
 hex = { workspace = true }
 anyhow = { workspace = true }
 rand = "0.8"
-deplob-core = { path = "../../lib/deplob-core" }
-
-[build-dependencies]
-sp1-helper = { workspace = true }

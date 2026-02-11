@@ -1,10 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "sp1-programs/deposit/program",
     "sp1-programs/deposit/script",
-    # "sp1-programs/withdraw/program",
-    # "sp1-programs/withdraw/script",
+    "sp1-programs/withdraw/program",
+    "sp1-programs/withdraw/script",
     # "sp1-programs/create-order/program",
     # "sp1-programs/create-order/script",
     # "sp1-programs/cancel-order/program",
