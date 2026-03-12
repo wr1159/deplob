@@ -1,0 +1,26 @@
+[package]
+name = "withdraw-script"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "withdraw-script"
+path = "src/main.rs"
+
+[[bin]]
+name = "generate_withdraw_test_data"
+path = "src/bin/generate_test_data.rs"
+
+[dependencies]
+sp1-sdk = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-sol-types = { workspace = true }
+serde = { workspace = true }
+serde_json = "1.0"
+hex = { workspace = true }
+anyhow = { workspace = true }
+rand = { workspace = true }
+deplob-core = { path = "../../lib/deplob-core" }
+
+[build-dependencies]
+sp1-helper = { workspace = true }
