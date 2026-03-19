@@ -19,17 +19,6 @@ interface IDePLOB {
         uint256 fee
     );
 
-    event OrderCreated(
-        bytes32 indexed orderCommitment,
-        bytes encryptedOrder,
-        uint256 timestamp
-    );
-
-    event OrderCancelled(
-        bytes32 indexed orderNullifier,
-        uint256 timestamp
-    );
-
     event TradeSettled(
         bytes32 indexed buyerNewCommitment,
         bytes32 indexed sellerNewCommitment,
@@ -64,26 +53,6 @@ interface IDePLOB {
         uint256 amount,
         bytes32 root,
         bytes calldata proof
-    ) external;
-
-    // ============ Orders ============
-
-    /// @notice Create a new encrypted order (TEE only)
-    /// @param orderCommitment The order commitment
-    /// @param depositNullifier The nullifier of the deposit backing the order
-    /// @param encryptedOrder The encrypted order data for TEE
-    function createOrder(
-        bytes32 orderCommitment,
-        bytes32 depositNullifier,
-        bytes calldata encryptedOrder
-    ) external;
-
-    /// @notice Cancel an existing order (TEE only)
-    /// @param orderNullifier The order nullifier
-    /// @param orderCommitment The order commitment
-    function cancelOrder(
-        bytes32 orderNullifier,
-        bytes32 orderCommitment
     ) external;
 
     // ============ Settlement (TEE only) ============

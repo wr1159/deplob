@@ -27,12 +27,6 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
     /// @notice Spent nullifiers (prevents double-spend)
     mapping(bytes32 => bool) public nullifierHashes;
 
-    /// @notice Order nullifiers (tracks used deposits for orders)
-    mapping(bytes32 => bool) public orderNullifiers;
-
-    /// @notice Cancelled order nullifiers
-    mapping(bytes32 => bool) public cancelledOrders;
-
     /// @notice Known commitments (for validation)
     mapping(bytes32 => bool) public commitments;
 
@@ -147,40 +141,6 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
         IERC20(token).safeTransfer(recipient, amount);
 
         emit Withdrawal(recipient, nullifierHash, address(0), 0);
-    }
-
-    // ============ Order Creation ============
-
-    /// @inheritdoc IDePLOB
-    function createOrder(
-        bytes32 orderCommitment,
-        bytes32 depositNullifier,
-        bytes calldata encryptedOrder
-    ) external onlyTEE nonReentrant {
-        require(
-            !orderNullifiers[depositNullifier],
-            "Deposit already used for order"
-        );
-
-        // Mark deposit as locked for order
-        orderNullifiers[depositNullifier] = true;
-
-        emit OrderCreated(orderCommitment, encryptedOrder, block.timestamp);
-    }
-
-    // ============ Order Cancellation ============
-
-    /// @inheritdoc IDePLOB
-    function cancelOrder(
-        bytes32 orderNullifier,
-        bytes32 /* orderCommitment */
-    ) external onlyTEE nonReentrant {
-        require(!cancelledOrders[orderNullifier], "Order already cancelled");
-
-        // Mark order as cancelled
-        cancelledOrders[orderNullifier] = true;
-
-        emit OrderCancelled(orderNullifier, block.timestamp);
     }
 
     // ============ Settlement ============

@@ -9,7 +9,7 @@ members = [
     # "sp1-programs/cancel-order/program",
     # "sp1-programs/cancel-order/script",
     "sp1-programs/lib/deplob-core",
-    # "tee",
+    "tee",
 ]
 
 [workspace.package]
@@ -38,6 +38,7 @@ hex = "0.4"
 
 # Async
 tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
 
 # Error handling
 anyhow = "1.0"
