@@ -1,7 +1,33 @@
 use deplob_core::CommitmentPreimage;
 use rand::RngCore;
+use serde::Serialize;
 
 use crate::types::Trade;
+
+/// New deposit note stored for a user after a trade settlement.
+/// Keyed by the user's old deposit_nullifier.
+#[derive(Debug, Clone, Serialize)]
+pub struct StoredSettlement {
+    pub commitment: String,
+    pub nullifier_note: String,
+    pub secret: String,
+    pub nullifier: String,
+    pub token: String,
+    pub amount: String,
+}
+
+impl StoredSettlement {
+    pub fn from_preimage(preimage: &CommitmentPreimage) -> Self {
+        Self {
+            commitment: format!("0x{}", hex::encode(preimage.commitment())),
+            nullifier_note: format!("0x{}", hex::encode(preimage.nullifier_note)),
+            secret: format!("0x{}", hex::encode(preimage.secret)),
+            nullifier: format!("0x{}", hex::encode(preimage.nullifier())),
+            token: format!("0x{}", hex::encode(preimage.token_address())),
+            amount: preimage.amount_value().to_string(),
+        }
+    }
+}
 
 /// Data needed to call `settleMatch()` on the smart contract.
 #[derive(Debug, Clone)]

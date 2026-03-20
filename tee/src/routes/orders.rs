@@ -12,7 +12,7 @@ use deplob_core::keccak256_concat;
 
 use crate::{
     matching::add_and_match,
-    settlement::generate_settlement,
+    settlement::{generate_settlement, StoredSettlement},
     state::SharedState,
     types::{Order, OrderEntry, OrderSide},
     verification::{verify_deposit_covers_order, verify_deposit_ownership},
@@ -274,7 +274,19 @@ pub async fn submit_order(
             state.order_details.remove(&trade.buy_entry.order_id);
             state.order_details.remove(&trade.sell_entry.order_id);
 
-            out.push(generate_settlement(trade, &mut rng));
+            let settlement = generate_settlement(trade, &mut rng);
+
+            // Store new deposit notes so users can retrieve them via GET /v1/settlements
+            state.settlements.insert(
+                settlement.buyer_old_nullifier,
+                StoredSettlement::from_preimage(&settlement.buyer_new_preimage),
+            );
+            state.settlements.insert(
+                settlement.seller_old_nullifier,
+                StoredSettlement::from_preimage(&settlement.seller_new_preimage),
+            );
+
+            out.push(settlement);
         }
         out
     }; // rng dropped here

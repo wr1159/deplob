@@ -1,5 +1,6 @@
 pub mod health;
 pub mod orders;
+pub mod settlements;
 
 use axum::{
     routing::{delete, get, post},
@@ -13,5 +14,9 @@ pub fn router(state: SharedState) -> Router {
         .route("/v1/health", get(health::health))
         .route("/v1/orders", post(orders::submit_order))
         .route("/v1/orders/:order_id", delete(orders::cancel_order))
+        .route(
+            "/v1/settlements/:deposit_nullifier",
+            get(settlements::get_settlement),
+        )
         .with_state(state)
 }

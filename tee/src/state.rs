@@ -5,6 +5,7 @@ use tokio::sync::RwLock;
 
 use crate::chain::ChainClient;
 use crate::orderbook::OrderBook;
+use crate::settlement::StoredSettlement;
 use crate::types::OrderEntry;
 
 pub struct TeeState {
@@ -15,6 +16,8 @@ pub struct TeeState {
     pub order_to_deposit: HashMap<[u8; 32], [u8; 32]>,
     /// order_id -> OrderEntry: full order details
     pub order_details: HashMap<[u8; 32], OrderEntry>,
+    /// deposit_nullifier -> StoredSettlement: new deposit notes after a trade
+    pub settlements: HashMap<[u8; 32], StoredSettlement>,
     pub chain: Arc<dyn ChainClient>,
 }
 
@@ -25,6 +28,7 @@ impl TeeState {
             locked_deposits: HashMap::new(),
             order_to_deposit: HashMap::new(),
             order_details: HashMap::new(),
+            settlements: HashMap::new(),
             chain,
         }
     }
