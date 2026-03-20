@@ -1,0 +1,30 @@
+[package]
+name = "deplob-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "deplob"
+path = "src/main.rs"
+
+[dependencies]
+deplob-core = { path = "../sp1-programs/lib/deplob-core" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = "1"
+anyhow = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+clap = { version = "4", features = ["derive", "env"] }
+alloy = { version = "0.7", features = [
+    "providers",
+    "contract",
+    "rpc-types",
+    "signers",
+    "signer-local",
+    "network",
+    "transport-http",
+] }
+reqwest = { version = "0.12", features = ["json"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

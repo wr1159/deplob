@@ -10,6 +10,7 @@ members = [
     # "sp1-programs/cancel-order/script",
     "sp1-programs/lib/deplob-core",
     "tee",
+    "cli",
 ]
 
 [workspace.package]
