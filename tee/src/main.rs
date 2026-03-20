@@ -14,6 +14,9 @@ use state::new_shared;
 
 #[tokio::main]
 async fn main() {
+    // Load .env file if present (won't override existing env vars)
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
