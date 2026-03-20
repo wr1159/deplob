@@ -47,7 +47,11 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
         .with_context(|| format!("failed to read note file: {}", args.note))?;
     let note: serde_json::Value = serde_json::from_str(&note_str)?;
 
-    let nullifier_note = parse_hex32(note["nullifier_note"].as_str().context("missing nullifier_note")?)?;
+    let nullifier_note = parse_hex32(
+        note["nullifier_note"]
+            .as_str()
+            .context("missing nullifier_note")?,
+    )?;
     let secret = parse_hex32(note["secret"].as_str().context("missing secret")?)?;
     let token_hex = note["token"].as_str().context("missing token")?;
     let token_bytes = parse_hex20(token_hex)?;
@@ -64,7 +68,7 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
     // Sync Merkle tree indexer and get proof
     println!("Syncing Merkle tree from on-chain events...");
     let indexer = MerkleIndexer::sync(&args.chain.rpc_url, &args.chain.contract).await?;
-    let (siblings, path_indices, root) = indexer.proof_for(&commitment)?;
+    let (_siblings, _path_indices, root) = indexer.proof_for(&commitment)?;
 
     println!("Merkle root: 0x{}", hex::encode(root));
 
@@ -74,12 +78,23 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
     println!("Using empty proof (mock verifier mode)");
 
     // Parse addresses
-    let recipient_addr: Address = args.recipient.parse().context("invalid recipient address")?;
+    let recipient_addr: Address = args
+        .recipient
+        .parse()
+        .context("invalid recipient address")?;
     let token_addr: Address = token_hex.parse().context("invalid token address")?;
-    let contract_addr: Address = args.chain.contract.parse().context("invalid contract address")?;
+    let contract_addr: Address = args
+        .chain
+        .contract
+        .parse()
+        .context("invalid contract address")?;
 
     // Build provider with wallet
-    let signer: PrivateKeySigner = args.chain.private_key.parse().context("invalid private key")?;
+    let signer: PrivateKeySigner = args
+        .chain
+        .private_key
+        .parse()
+        .context("invalid private key")?;
     let wallet = EthereumWallet::from(signer);
     let url = args.chain.rpc_url.parse().context("invalid RPC URL")?;
     let provider = ProviderBuilder::new()

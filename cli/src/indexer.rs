@@ -4,11 +4,7 @@
 
 use std::collections::HashMap;
 
-use alloy::{
-    primitives::Address,
-    providers::ProviderBuilder,
-    sol,
-};
+use alloy::{primitives::Address, providers::ProviderBuilder, sol};
 use anyhow::{Context, Result};
 use deplob_core::merkle::IncrementalMerkleTree;
 
@@ -50,10 +46,7 @@ impl MerkleIndexer {
         let mut indexed: Vec<(u64, [u8; 32])> = events
             .iter()
             .map(|(event, _log)| {
-                let idx: u64 = event
-                    .leafIndex
-                    .try_into()
-                    .expect("leafIndex too large");
+                let idx: u64 = event.leafIndex.try_into().expect("leafIndex too large");
                 (idx, event.leaf.0)
             })
             .collect();
@@ -80,10 +73,7 @@ impl MerkleIndexer {
     /// Generate a Merkle proof for a commitment.
     ///
     /// Returns (siblings, path_indices, root).
-    pub fn proof_for(
-        &self,
-        commitment: &[u8; 32],
-    ) -> Result<(Vec<[u8; 32]>, Vec<u8>, [u8; 32])> {
+    pub fn proof_for(&self, commitment: &[u8; 32]) -> Result<(Vec<[u8; 32]>, Vec<u8>, [u8; 32])> {
         let &leaf_index = self
             .leaf_map
             .get(commitment)
@@ -96,12 +86,12 @@ impl MerkleIndexer {
     }
 
     /// Get the leaf index for a commitment, if it exists.
-    pub fn leaf_index(&self, commitment: &[u8; 32]) -> Option<u32> {
+    pub fn _leaf_index(&self, commitment: &[u8; 32]) -> Option<u32> {
         self.leaf_map.get(commitment).copied()
     }
 
     /// Get the current Merkle root.
-    pub fn root(&self) -> [u8; 32] {
+    pub fn _root(&self) -> [u8; 32] {
         self.tree.get_root()
     }
 }
