@@ -121,17 +121,16 @@ pub struct AlloyChainClient {
 
 impl AlloyChainClient {
     pub fn new(rpc_url: String, address: Address, signer: PrivateKeySigner) -> Self {
-        Self { rpc_url, address, signer }
+        Self {
+            rpc_url,
+            address,
+            signer,
+        }
     }
 
-    pub async fn from_env(
-        rpc_url: &str,
-        address: &str,
-        private_key: &str,
-    ) -> anyhow::Result<Self> {
+    pub async fn from_env(rpc_url: &str, address: &str, private_key: &str) -> anyhow::Result<Self> {
         let address: Address = address.parse().context("invalid DEPLOB_ADDRESS")?;
-        let signer: PrivateKeySigner =
-            private_key.parse().context("invalid TEE_PRIVATE_KEY")?;
+        let signer: PrivateKeySigner = private_key.parse().context("invalid TEE_PRIVATE_KEY")?;
         Ok(Self::new(rpc_url.to_string(), address, signer))
     }
 }
@@ -140,47 +139,44 @@ impl AlloyChainClient {
 impl ChainClient for AlloyChainClient {
     async fn is_commitment_known(&self, commitment: [u8; 32]) -> anyhow::Result<bool> {
         let url = self.rpc_url.parse().context("invalid ETH_RPC_URL")?;
-        let provider = ProviderBuilder::new().on_http(url);
+        let provider = ProviderBuilder::new().connect_http(url);
         let contract = IDePLOB::IDePLOBInstance::new(self.address, provider);
         let result = contract
             .commitments(FixedBytes(commitment))
             .call()
             .await
             .context("commitments() call failed")?;
-        Ok(result._0)
+        Ok(result)
     }
 
     async fn is_nullifier_spent(&self, nullifier: [u8; 32]) -> anyhow::Result<bool> {
         let url = self.rpc_url.parse().context("invalid ETH_RPC_URL")?;
-        let provider = ProviderBuilder::new().on_http(url);
+        let provider = ProviderBuilder::new().connect_http(url);
         let contract = IDePLOB::IDePLOBInstance::new(self.address, provider);
         let result = contract
             .nullifierHashes(FixedBytes(nullifier))
             .call()
             .await
             .context("nullifierHashes() call failed")?;
-        Ok(result._0)
+        Ok(result)
     }
 
     async fn is_known_root(&self, root: [u8; 32]) -> anyhow::Result<bool> {
         let url = self.rpc_url.parse().context("invalid ETH_RPC_URL")?;
-        let provider = ProviderBuilder::new().on_http(url);
+        let provider = ProviderBuilder::new().connect_http(url);
         let contract = IDePLOB::IDePLOBInstance::new(self.address, provider);
         let result = contract
             .isKnownRoot(FixedBytes(root))
             .call()
             .await
             .context("isKnownRoot() call failed")?;
-        Ok(result._0)
+        Ok(result)
     }
 
     async fn settle_match(&self, data: &SettlementData) -> anyhow::Result<()> {
         let url = self.rpc_url.parse().context("invalid ETH_RPC_URL")?;
         let wallet = EthereumWallet::from(self.signer.clone());
-        let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
-            .wallet(wallet)
-            .on_http(url);
+        let provider = ProviderBuilder::new().wallet(wallet).connect_http(url);
         let contract = IDePLOB::IDePLOBInstance::new(self.address, provider);
         contract
             .settleMatch(

@@ -9,8 +9,8 @@ members = [
     # "sp1-programs/cancel-order/program",
     # "sp1-programs/cancel-order/script",
     "sp1-programs/lib/deplob-core",
-    # "tee",  # Temporarily excluded — alloy 0.7 conflicts with sp1-sdk network's alloy 1.0
-    # "cli",  # Temporarily excluded — alloy 0.7 conflicts with sp1-sdk network's alloy 1.0
+    "tee",
+    "cli",
 ]
 
 [workspace.package]
@@ -25,8 +25,8 @@ sp1-sdk = { version = "6.0.2", features = ["network"] }
 sp1-build = "6.0.2"
 
 # Alloy (Ethereum types)
-alloy-primitives = "0.8"
-alloy-sol-types = "0.8"
+alloy-primitives = "1.0"
+alloy-sol-types = "1.0"
 
 # Crypto
 sha2 = "0.10"

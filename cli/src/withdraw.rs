@@ -80,7 +80,11 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
     let proof = if let Some(proof_path) = &args.proof {
         let proof_bytes = std::fs::read(proof_path)
             .with_context(|| format!("failed to read proof file: {proof_path}"))?;
-        println!("Loaded proof from {} ({} bytes)", proof_path, proof_bytes.len());
+        println!(
+            "Loaded proof from {} ({} bytes)",
+            proof_path,
+            proof_bytes.len()
+        );
         Bytes::from(proof_bytes)
     } else {
         println!("No --proof file provided — using empty proof (mock verifier mode)");
@@ -107,10 +111,7 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
         .context("invalid private key")?;
     let wallet = EthereumWallet::from(signer);
     let url = args.chain.rpc_url.parse().context("invalid RPC URL")?;
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(wallet)
-        .on_http(url);
+    let provider = ProviderBuilder::new().wallet(wallet).connect_http(url);
 
     // Submit withdrawal
     println!("Submitting withdrawal...");

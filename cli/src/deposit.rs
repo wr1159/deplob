@@ -52,7 +52,11 @@ pub async fn run(args: DepositArgs) -> Result<()> {
     let token_addr: Address = args.token.parse().context("invalid token address")?;
 
     let amount: u128 = args.amount.parse().context("invalid amount")?;
-    let contract_addr: Address = args.chain.contract.parse().context("invalid contract address")?;
+    let contract_addr: Address = args
+        .chain
+        .contract
+        .parse()
+        .context("invalid contract address")?;
 
     // Generate random secrets
     let nullifier_note: [u8; 32] = rand::random();
@@ -66,13 +70,14 @@ pub async fn run(args: DepositArgs) -> Result<()> {
     println!("Commitment: 0x{}", hex::encode(commitment));
 
     // Build provider with wallet
-    let signer: PrivateKeySigner = args.chain.private_key.parse().context("invalid private key")?;
+    let signer: PrivateKeySigner = args
+        .chain
+        .private_key
+        .parse()
+        .context("invalid private key")?;
     let wallet = EthereumWallet::from(signer);
     let url = args.chain.rpc_url.parse().context("invalid RPC URL")?;
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(wallet)
-        .on_http(url);
+    let provider = ProviderBuilder::new().wallet(wallet).connect_http(url);
 
     // Approve token transfer
     println!("Approving token transfer...");

@@ -29,7 +29,7 @@ impl MerkleIndexer {
     /// the Merkle tree.
     pub async fn sync(rpc_url: &str, contract_addr: &str) -> Result<Self> {
         let url = rpc_url.parse().context("invalid RPC URL")?;
-        let provider = ProviderBuilder::new().on_http(url);
+        let provider = ProviderBuilder::new().connect_http(url);
         let address: Address = contract_addr.parse().context("invalid contract address")?;
 
         let contract = IMerkleTree::IMerkleTreeInstance::new(address, &provider);
