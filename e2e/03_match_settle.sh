@@ -112,7 +112,7 @@ cargo run -p deplob-cli --release -- withdraw \
     $PROVE_FLAG
 
 # Cleanup
-rm -f order_0x*.json
+rm -f order_*.json
 
 echo ""
 echo "============================================"

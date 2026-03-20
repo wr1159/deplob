@@ -45,7 +45,7 @@ cargo run -p deplob-cli --release -- order \
     --private-key "$USER1_PRIVATE_KEY"
 
 # Extract order_id from the saved order file
-ORDER_FILE=$(ls -t order_0x*.json 2>/dev/null | head -1)
+ORDER_FILE=$(ls -t order_*.json 2>/dev/null | head -1)
 if [ -z "$ORDER_FILE" ]; then
     echo "ERROR: No order file found"
     exit 1
