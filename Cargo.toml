@@ -9,8 +9,8 @@ members = [
     # "sp1-programs/cancel-order/program",
     # "sp1-programs/cancel-order/script",
     "sp1-programs/lib/deplob-core",
-    "tee",
-    "cli",
+    # "tee",  # Temporarily excluded — alloy 0.7 conflicts with sp1-sdk network's alloy 1.0
+    # "cli",  # Temporarily excluded — alloy 0.7 conflicts with sp1-sdk network's alloy 1.0
 ]
 
 [workspace.package]
@@ -20,9 +20,9 @@ license = "MIT"
 
 [workspace.dependencies]
 # SP1
-sp1-zkvm = "3.0.0"
-sp1-sdk = "3.0.0"
-sp1-helper = "3.0.0"
+sp1-zkvm = "6.0.2"
+sp1-sdk = { version = "6.0.2", features = ["network"] }
+sp1-build = "6.0.2"
 
 # Alloy (Ethereum types)
 alloy-primitives = "0.8"

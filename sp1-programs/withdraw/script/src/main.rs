@@ -15,10 +15,10 @@
 use alloy_primitives::{Address, U256};
 use alloy_sol_types::{sol, SolType};
 use deplob_core::{CommitmentPreimage, MerkleProof, TREE_DEPTH};
-use sp1_sdk::{HashableKey, ProverClient, SP1Stdin};
+use sp1_sdk::{HashableKey, ProveRequest, Prover, ProverClient, ProvingKey, SP1Stdin};
 use std::env;
 
-const ELF: &[u8] = include_bytes!("../../program/elf/riscv32im-succinct-zkvm-elf");
+const ELF_BYTES: &[u8] = include_bytes!("../../program/elf/riscv32im-succinct-zkvm-elf");
 
 // Solidity ABI encoding for public values
 sol! {
@@ -63,10 +63,11 @@ fn parse_bytes20(hex_str: &str) -> [u8; 20] {
     bytes.try_into().expect("Expected 20 bytes")
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     // Initialize SP1 prover
     sp1_sdk::utils::setup_logger();
-    let client = ProverClient::new();
+    let client = ProverClient::from_env().await;
 
     let args: Vec<String> = env::args().collect();
 
@@ -208,18 +209,19 @@ fn main() -> anyhow::Result<()> {
     // ============ Execute (for testing) ============
 
     println!("\n--- Executing SP1 Program ---");
-    let (mut output, report) = client.execute(ELF, stdin.clone()).run()?;
+    let elf = ELF_BYTES.into();
+    let (mut output, report) = client.execute(elf, stdin.clone()).await?;
     println!(
         "Execution successful! Cycles: {}",
         report.total_instruction_count()
     );
 
     // Read outputs from SP1 program
-    let nullifier: [u8; 32] = output.read();
-    let root_out: [u8; 32] = output.read();
-    let recipient_out: [u8; 20] = output.read();
-    let token_out: [u8; 20] = output.read();
-    let amount_out: u128 = output.read();
+    let nullifier: [u8; 32] = output.read::<[u8; 32]>();
+    let root_out: [u8; 32] = output.read::<[u8; 32]>();
+    let recipient_out: [u8; 20] = output.read::<[u8; 20]>();
+    let token_out: [u8; 20] = output.read::<[u8; 20]>();
+    let amount_out: u128 = output.read::<u128>();
 
     println!("\nSP1 Program Outputs:");
     println!("  nullifier: 0x{}", hex::encode(nullifier));
@@ -241,7 +243,8 @@ fn main() -> anyhow::Result<()> {
     let proof_type = env::var("GENERATE_PROOF").unwrap_or_default();
 
     if !proof_type.is_empty() && proof_type != "false" {
-        let (pk, vk) = client.setup(ELF);
+        let pk = client.setup(ELF_BYTES.into()).await?;
+        let vk = pk.verifying_key().clone();
         println!("\n--- Generating SP1 Proof ---");
         println!("Verification key: {}", vk.bytes32());
 
@@ -249,14 +252,14 @@ fn main() -> anyhow::Result<()> {
             "plonk" => {
                 println!("Generating Plonk proof (on-chain verifiable)...");
                 println!("This may take 10-30 minutes...");
-                let proof = client.prove(&pk, stdin).plonk().run()?;
+                let proof = client.prove(&pk, stdin.clone()).plonk().await?;
                 println!("Plonk proof generated successfully!");
                 proof.bytes()
             }
             "groth16" | "true" | _ => {
                 println!("Generating Groth16 proof (on-chain verifiable)...");
                 println!("This may take 10-30 minutes...");
-                let proof = client.prove(&pk, stdin).groth16().run()?;
+                let proof = client.prove(&pk, stdin.clone()).groth16().await?;
                 println!("Groth16 proof generated successfully!");
                 proof.bytes()
             }

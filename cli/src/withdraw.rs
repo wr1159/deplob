@@ -37,6 +37,11 @@ pub struct WithdrawArgs {
     #[arg(long)]
     pub recipient: String,
 
+    /// Path to a proof file (e.g. withdraw_proof.bin from withdraw-script).
+    /// If omitted, sends empty proof bytes (only works with MockSP1Verifier).
+    #[arg(long)]
+    pub proof: Option<String>,
+
     #[command(flatten)]
     pub chain: ChainArgs,
 }
@@ -72,10 +77,15 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
 
     println!("Merkle root: 0x{}", hex::encode(root));
 
-    // For Tier 1 (MockSP1Verifier), pass empty proof bytes.
-    // Real proof generation (--prove groth16) would be added as a feature flag.
-    let proof = Bytes::new();
-    println!("Using empty proof (mock verifier mode)");
+    let proof = if let Some(proof_path) = &args.proof {
+        let proof_bytes = std::fs::read(proof_path)
+            .with_context(|| format!("failed to read proof file: {proof_path}"))?;
+        println!("Loaded proof from {} ({} bytes)", proof_path, proof_bytes.len());
+        Bytes::from(proof_bytes)
+    } else {
+        println!("No --proof file provided — using empty proof (mock verifier mode)");
+        Bytes::new()
+    };
 
     // Parse addresses
     let recipient_addr: Address = args

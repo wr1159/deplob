@@ -12,12 +12,13 @@
 //!   cargo run --release --bin generate_withdraw_test_data -- <token_address> <amount> <recipient>
 
 use deplob_core::{CommitmentPreimage, MerkleProof, TREE_DEPTH};
-use sp1_sdk::{HashableKey, ProverClient, SP1Stdin};
+use sp1_sdk::{HashableKey, Prover, ProverClient, ProvingKey, SP1Stdin};
 use std::env;
 
-const ELF: &[u8] = include_bytes!("../../../program/elf/riscv32im-succinct-zkvm-elf");
+const ELF_BYTES: &[u8] = include_bytes!("../../../program/elf/riscv32im-succinct-zkvm-elf");
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();
 
     // Parse arguments or use defaults
@@ -82,7 +83,7 @@ fn main() -> anyhow::Result<()> {
     );
 
     // Initialize SP1 and execute to verify
-    let client = ProverClient::new();
+    let client = ProverClient::from_env().await;
 
     let mut stdin = SP1Stdin::new();
 
@@ -100,14 +101,14 @@ fn main() -> anyhow::Result<()> {
     stdin.write(&amount);
 
     // Execute to verify correctness
-    let (mut output, _report) = client.execute(ELF, stdin.clone()).run()?;
+    let (mut output, _report) = client.execute(ELF_BYTES.into(), stdin.clone()).await?;
 
     // Read and verify outputs
-    let output_nullifier: [u8; 32] = output.read();
-    let output_root: [u8; 32] = output.read();
-    let output_recipient: [u8; 20] = output.read();
-    let output_token: [u8; 20] = output.read();
-    let output_amount: u128 = output.read();
+    let output_nullifier: [u8; 32] = output.read::<[u8; 32]>();
+    let output_root: [u8; 32] = output.read::<[u8; 32]>();
+    let output_recipient: [u8; 20] = output.read::<[u8; 20]>();
+    let output_token: [u8; 20] = output.read::<[u8; 20]>();
+    let output_amount: u128 = output.read::<u128>();
 
     assert_eq!(nullifier, output_nullifier, "Nullifier mismatch");
     assert_eq!(root, output_root, "Root mismatch");
@@ -116,7 +117,8 @@ fn main() -> anyhow::Result<()> {
     assert_eq!(amount, output_amount, "Amount mismatch");
 
     // Get verification key
-    let (_pk, vk) = client.setup(ELF);
+    let pk = client.setup(ELF_BYTES.into()).await?;
+    let vk = pk.verifying_key();
 
     // Format siblings for JSON output
     let siblings_hex: Vec<String> = siblings
