@@ -249,6 +249,138 @@ contract DePLOBTest is Test {
         );
     }
 
+    // ============ Attestation Tests ============
+
+    // Private key for vm.sign — corresponds to a known address
+    uint256 constant ATTESTATION_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+
+    function _attestationSigner() internal pure returns (address) {
+        return vm.addr(ATTESTATION_PK);
+    }
+
+    function _signSettlement(
+        bytes32 buyerNullifier,
+        bytes32 sellerNullifier,
+        bytes32 buyerCommitment,
+        bytes32 sellerCommitment
+    ) internal pure returns (bytes memory) {
+        bytes32 settlementHash = keccak256(abi.encodePacked(
+            buyerNullifier, sellerNullifier, buyerCommitment, sellerCommitment
+        ));
+        bytes32 ethSignedHash = keccak256(abi.encodePacked(
+            "\x19Ethereum Signed Message:\n32", settlementHash
+        ));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ATTESTATION_PK, ethSignedHash);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function test_SettleMatchWithValidAttestation() public {
+        bytes32 buyerNullifier = keccak256("attest buyer");
+        bytes32 sellerNullifier = keccak256("attest seller");
+        bytes32 buyerCommitment = keccak256("attest buyer commit");
+        bytes32 sellerCommitment = keccak256("attest seller commit");
+
+        // Set enclave signing key
+        deplob.setEnclaveSigningKey(_attestationSigner());
+
+        bytes memory attestation = _signSettlement(
+            buyerNullifier, sellerNullifier, buyerCommitment, sellerCommitment
+        );
+
+        vm.prank(teeOperator);
+        deplob.settleMatch(
+            buyerNullifier,
+            sellerNullifier,
+            buyerCommitment,
+            sellerCommitment,
+            attestation,
+            ""
+        );
+
+        assertTrue(deplob.isSpentNullifier(buyerNullifier));
+        assertTrue(deplob.isSpentNullifier(sellerNullifier));
+    }
+
+    function test_SettleMatchWithInvalidAttestation() public {
+        bytes32 buyerNullifier = keccak256("bad attest buyer");
+        bytes32 sellerNullifier = keccak256("bad attest seller");
+        bytes32 buyerCommitment = keccak256("bad attest buyer commit");
+        bytes32 sellerCommitment = keccak256("bad attest seller commit");
+
+        // Set enclave signing key to a DIFFERENT address
+        deplob.setEnclaveSigningKey(makeAddr("wrong signer"));
+
+        // Sign with ATTESTATION_PK (won't match enclaveSigningKey)
+        bytes memory attestation = _signSettlement(
+            buyerNullifier, sellerNullifier, buyerCommitment, sellerCommitment
+        );
+
+        vm.prank(teeOperator);
+        vm.expectRevert("Invalid attestation");
+        deplob.settleMatch(
+            buyerNullifier,
+            sellerNullifier,
+            buyerCommitment,
+            sellerCommitment,
+            attestation,
+            ""
+        );
+    }
+
+    function test_SettleMatchNoAttestationAllowed() public {
+        // requireAttestation defaults to false, so empty attestation should pass
+        bytes32 buyerNullifier = keccak256("no attest buyer");
+        bytes32 sellerNullifier = keccak256("no attest seller");
+
+        vm.prank(teeOperator);
+        deplob.settleMatch(
+            buyerNullifier,
+            sellerNullifier,
+            keccak256("commit 1"),
+            keccak256("commit 2"),
+            "",
+            ""
+        );
+
+        assertTrue(deplob.isSpentNullifier(buyerNullifier));
+    }
+
+    function test_SettleMatchNoAttestationRequired() public {
+        // Enable requireAttestation, then try without attestation
+        deplob.setRequireAttestation(true);
+
+        vm.prank(teeOperator);
+        vm.expectRevert("Attestation required");
+        deplob.settleMatch(
+            keccak256("req buyer"),
+            keccak256("req seller"),
+            keccak256("req commit 1"),
+            keccak256("req commit 2"),
+            "",
+            ""
+        );
+    }
+
+    function test_SetEnclaveSigningKeyOnlyOwner() public {
+        vm.prank(alice);
+        vm.expectRevert("Not owner");
+        deplob.setEnclaveSigningKey(alice);
+
+        // Owner can set
+        deplob.setEnclaveSigningKey(alice);
+        assertEq(deplob.enclaveSigningKey(), alice);
+    }
+
+    function test_SetRequireAttestationOnlyOwner() public {
+        vm.prank(alice);
+        vm.expectRevert("Not owner");
+        deplob.setRequireAttestation(true);
+
+        // Owner can set
+        deplob.setRequireAttestation(true);
+        assertTrue(deplob.requireAttestation());
+    }
+
     // ============ Admin Tests ============
 
     function test_OnlyOwnerCanAddToken() public {

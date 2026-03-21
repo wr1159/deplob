@@ -73,6 +73,14 @@ interface IDePLOB {
         bytes calldata proof
     ) external;
 
+    // ============ Admin Functions ============
+
+    /// @notice Set the enclave signing key for attestation verification
+    function setEnclaveSigningKey(address _key) external;
+
+    /// @notice Toggle whether attestation is required for settlement
+    function setRequireAttestation(bool _required) external;
+
     // ============ View Functions ============
 
     function isKnownRoot(bytes32 root) external view returns (bool);

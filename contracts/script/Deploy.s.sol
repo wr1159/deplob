@@ -133,6 +133,16 @@ contract DeploySepoliaScript is Script {
             console.log("Minted to user2:", user2);
         } catch {}
 
+        // Set enclave signing key if provided (for attestation verification)
+        try vm.envAddress("ENCLAVE_SIGNING_KEY") returns (address enclaveKey) {
+            deplob.setEnclaveSigningKey(enclaveKey);
+            deplob.setRequireAttestation(true);
+            console.log("Enclave signing key:", enclaveKey);
+            console.log("Attestation required: true");
+        } catch {
+            console.log("ENCLAVE_SIGNING_KEY not set - attestation not required");
+        }
+
         console.log("=== Deployed (Sepolia) ===");
         console.log("Verifier:", verifierAddr);
         console.log("Token A (TKA):", address(tokenA));

@@ -41,7 +41,11 @@ pub trait ChainClient: Send + Sync {
     /// Returns true if the given root exists in the Merkle root history.
     async fn is_known_root(&self, root: [u8; 32]) -> anyhow::Result<bool>;
     /// Submit a settled trade to the smart contract (`settleMatch`).
-    async fn settle_match(&self, data: &SettlementData) -> anyhow::Result<()>;
+    async fn settle_match(
+        &self,
+        data: &SettlementData,
+        attestation: Vec<u8>,
+    ) -> anyhow::Result<()>;
 }
 
 // ============ MockChainClient ============
@@ -85,7 +89,11 @@ impl ChainClient for MockChainClient {
         Ok(self.known_roots.contains(&root))
     }
 
-    async fn settle_match(&self, data: &SettlementData) -> anyhow::Result<()> {
+    async fn settle_match(
+        &self,
+        data: &SettlementData,
+        _attestation: Vec<u8>,
+    ) -> anyhow::Result<()> {
         self.settlements
             .lock()
             .expect("settlements lock")
@@ -173,7 +181,11 @@ impl ChainClient for AlloyChainClient {
         Ok(result)
     }
 
-    async fn settle_match(&self, data: &SettlementData) -> anyhow::Result<()> {
+    async fn settle_match(
+        &self,
+        data: &SettlementData,
+        attestation: Vec<u8>,
+    ) -> anyhow::Result<()> {
         let url = self.rpc_url.parse().context("invalid ETH_RPC_URL")?;
         let wallet = EthereumWallet::from(self.signer.clone());
         let provider = ProviderBuilder::new().wallet(wallet).connect_http(url);
@@ -184,8 +196,8 @@ impl ChainClient for AlloyChainClient {
                 FixedBytes(data.seller_old_nullifier),
                 FixedBytes(data.buyer_new_commitment),
                 FixedBytes(data.seller_new_commitment),
-                Bytes::new(), // attestation — TODO: real TEE attestation
-                Bytes::new(), // proof — TODO: settlement proof
+                Bytes::from(attestation),
+                Bytes::new(), // proof — reserved for future use
             )
             .send()
             .await

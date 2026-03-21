@@ -1,3 +1,4 @@
+mod attestation;
 mod chain;
 mod matching;
 mod orderbook;
@@ -9,6 +10,7 @@ mod verification;
 
 use std::{env, sync::Arc};
 
+use attestation::{AttestationProvider, EcdsaAttestationProvider, MockAttestationProvider};
 use chain::{AlloyChainClient, ChainClient, MockChainClient};
 use state::new_shared;
 
@@ -47,7 +49,26 @@ async fn main() {
         }
     };
 
-    let shared = new_shared(chain);
+    // Build attestation provider
+    let attestation: Arc<dyn AttestationProvider> = match env::var("TEE_ATTESTATION_KEY") {
+        Ok(key) if !key.is_empty() => {
+            let provider = EcdsaAttestationProvider::new(&key)
+                .expect("failed to initialise EcdsaAttestationProvider");
+            tracing::info!(
+                "Attestation signing address: {}",
+                provider.signing_address().unwrap()
+            );
+            Arc::new(provider)
+        }
+        _ => {
+            tracing::warn!(
+                "TEE_ATTESTATION_KEY not set — using mock attestation (empty bytes)"
+            );
+            Arc::new(MockAttestationProvider)
+        }
+    };
+
+    let shared = new_shared(chain, attestation);
     let app = routes::router(shared);
 
     let addr = "0.0.0.0:3000";

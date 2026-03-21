@@ -36,6 +36,12 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
     /// @notice TEE operator address (can call settleMatch)
     address public teeOperator;
 
+    /// @notice Enclave signing key for attestation verification
+    address public enclaveSigningKey;
+
+    /// @notice Whether attestation is required for settlement
+    bool public requireAttestation;
+
     /// @notice Contract owner
     address public owner;
 
@@ -79,6 +85,16 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
     /// @notice Update TEE operator
     function setTEEOperator(address _teeOperator) external onlyOwner {
         teeOperator = _teeOperator;
+    }
+
+    /// @notice Set the enclave signing key for attestation verification
+    function setEnclaveSigningKey(address _key) external onlyOwner {
+        enclaveSigningKey = _key;
+    }
+
+    /// @notice Toggle whether attestation is required for settlement
+    function setRequireAttestation(bool _required) external onlyOwner {
+        requireAttestation = _required;
     }
 
     /// @notice Transfer ownership
@@ -157,10 +173,36 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
         require(!nullifierHashes[buyerOldNullifier], "Buyer nullifier spent");
         require(!nullifierHashes[sellerOldNullifier], "Seller nullifier spent");
 
-        // TODO: Verify TEE attestation
-        // TODO: Verify settlement proof
-        // For now, we trust the TEE operator
-        (attestation, proof); // Silence unused variable warnings
+        // Verify TEE attestation (ECDSA signature over settlement hash)
+        if (attestation.length > 0) {
+            bytes32 settlementHash = keccak256(abi.encodePacked(
+                buyerOldNullifier,
+                sellerOldNullifier,
+                buyerNewCommitment,
+                sellerNewCommitment
+            ));
+            bytes32 ethSignedHash = keccak256(abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                settlementHash
+            ));
+
+            require(attestation.length == 65, "Invalid attestation length");
+            bytes32 r;
+            bytes32 s;
+            uint8 v;
+            assembly {
+                r := calldataload(attestation.offset)
+                s := calldataload(add(attestation.offset, 32))
+                v := byte(0, calldataload(add(attestation.offset, 64)))
+            }
+            address recovered = ecrecover(ethSignedHash, v, r, s);
+            require(recovered != address(0) && recovered == enclaveSigningKey, "Invalid attestation");
+        } else {
+            require(!requireAttestation, "Attestation required");
+        }
+
+        // proof parameter reserved for future use (e.g. ZK settlement proof)
+        (proof);
 
         // Spend old nullifiers
         nullifierHashes[buyerOldNullifier] = true;

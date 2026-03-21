@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use crate::attestation::AttestationProvider;
 use crate::chain::ChainClient;
 use crate::orderbook::OrderBook;
 use crate::settlement::StoredSettlement;
@@ -19,10 +20,11 @@ pub struct TeeState {
     /// deposit_nullifier -> StoredSettlement: new deposit notes after a trade
     pub settlements: HashMap<[u8; 32], StoredSettlement>,
     pub chain: Arc<dyn ChainClient>,
+    pub attestation: Arc<dyn AttestationProvider>,
 }
 
 impl TeeState {
-    pub fn new(chain: Arc<dyn ChainClient>) -> Self {
+    pub fn new(chain: Arc<dyn ChainClient>, attestation: Arc<dyn AttestationProvider>) -> Self {
         Self {
             book: OrderBook::new(),
             locked_deposits: HashMap::new(),
@@ -30,12 +32,16 @@ impl TeeState {
             order_details: HashMap::new(),
             settlements: HashMap::new(),
             chain,
+            attestation,
         }
     }
 }
 
 pub type SharedState = Arc<RwLock<TeeState>>;
 
-pub fn new_shared(chain: Arc<dyn ChainClient>) -> SharedState {
-    Arc::new(RwLock::new(TeeState::new(chain)))
+pub fn new_shared(
+    chain: Arc<dyn ChainClient>,
+    attestation: Arc<dyn AttestationProvider>,
+) -> SharedState {
+    Arc::new(RwLock::new(TeeState::new(chain, attestation)))
 }

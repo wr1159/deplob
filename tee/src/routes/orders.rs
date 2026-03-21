@@ -262,6 +262,7 @@ pub async fn submit_order(
     let trades = add_and_match(&mut state.book, entry);
 
     // --- Collect settlements and release write lock ---
+    let attestation_provider = state.attestation.clone();
     let settlements = {
         let mut rng = thread_rng();
         let mut out = Vec::new();
@@ -295,7 +296,13 @@ pub async fn submit_order(
 
     // --- Submit settlements to chain (outside write lock) ---
     for settlement in &settlements {
-        if let Err(e) = chain.settle_match(settlement).await {
+        let attestation_bytes = attestation_provider
+            .sign_settlement(settlement)
+            .unwrap_or_else(|e| {
+                tracing::error!("attestation signing failed: {e}");
+                vec![]
+            });
+        if let Err(e) = chain.settle_match(settlement, attestation_bytes).await {
             tracing::error!("settle_match failed: {e}");
         }
     }
