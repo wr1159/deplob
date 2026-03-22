@@ -4,7 +4,11 @@
 
 use std::collections::HashMap;
 
-use alloy::{primitives::Address, providers::ProviderBuilder, sol};
+use alloy::{
+    primitives::Address,
+    providers::{Provider, ProviderBuilder},
+    sol,
+};
 use anyhow::{Context, Result};
 use deplob_core::merkle::IncrementalMerkleTree;
 
@@ -34,22 +38,42 @@ impl MerkleIndexer {
 
         let contract = IMerkleTree::IMerkleTreeInstance::new(address, &provider);
 
-        // Fetch all LeafInserted events from block 0 to latest
-        let events = contract
-            .LeafInserted_filter()
-            .from_block(0)
-            .query()
+        // Fetch LeafInserted events in chunks to stay within RPC block range limits
+        let latest_block = provider
+            .get_block_number()
             .await
-            .context("failed to fetch LeafInserted events")?;
+            .context("failed to get latest block number")?;
 
-        // Sort by leafIndex to ensure correct insertion order
-        let mut indexed: Vec<(u64, [u8; 32])> = events
-            .iter()
-            .map(|(event, _log)| {
+        const CHUNK_SIZE: u64 = 10_000;
+        // On public RPCs, scanning from block 0 is too slow. Default to last 50k blocks
+        // which covers any recent deployment. Set DEPLOY_BLOCK to override.
+        let start_block = std::env::var("DEPLOY_BLOCK")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or_else(|| latest_block.saturating_sub(50_000));
+
+        let mut indexed: Vec<(u64, [u8; 32])> = Vec::new();
+        let mut from = start_block;
+
+        while from <= latest_block {
+            let to = (from + CHUNK_SIZE - 1).min(latest_block);
+            let events = contract
+                .LeafInserted_filter()
+                .from_block(from)
+                .to_block(to)
+                .query()
+                .await
+                .with_context(|| {
+                    format!("failed to fetch LeafInserted events for blocks {from}..{to}")
+                })?;
+
+            for (event, _log) in &events {
                 let idx: u64 = event.leafIndex.try_into().expect("leafIndex too large");
-                (idx, event.leaf.0)
-            })
-            .collect();
+                indexed.push((idx, event.leaf.0));
+            }
+
+            from = to + 1;
+        }
         indexed.sort_by_key(|(idx, _)| *idx);
 
         // Rebuild tree
@@ -72,8 +96,11 @@ impl MerkleIndexer {
 
     /// Generate a Merkle proof for a commitment.
     ///
-    /// Returns (siblings, path_indices, root).
-    pub fn proof_for(&self, commitment: &[u8; 32]) -> Result<(Vec<[u8; 32]>, Vec<u8>, [u8; 32])> {
+    /// Returns (siblings, path_indices, root, leaf_index).
+    pub fn proof_for(
+        &self,
+        commitment: &[u8; 32],
+    ) -> Result<(Vec<[u8; 32]>, Vec<u8>, [u8; 32], u32)> {
         let &leaf_index = self
             .leaf_map
             .get(commitment)
@@ -82,16 +109,11 @@ impl MerkleIndexer {
         let proof = self.tree.proof(leaf_index);
         let root = self.tree.get_root();
 
-        Ok((proof.siblings.to_vec(), proof.path_indices.to_vec(), root))
-    }
-
-    /// Get the leaf index for a commitment, if it exists.
-    pub fn _leaf_index(&self, commitment: &[u8; 32]) -> Option<u32> {
-        self.leaf_map.get(commitment).copied()
-    }
-
-    /// Get the current Merkle root.
-    pub fn _root(&self) -> [u8; 32] {
-        self.tree.get_root()
+        Ok((
+            proof.siblings.to_vec(),
+            proof.path_indices.to_vec(),
+            root,
+            leaf_index,
+        ))
     }
 }

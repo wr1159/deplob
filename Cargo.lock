@@ -2356,6 +2356,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sp1-sdk",
  "tokio",
  "tracing",
  "tracing-subscriber",

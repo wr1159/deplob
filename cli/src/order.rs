@@ -96,7 +96,7 @@ pub async fn run(args: OrderArgs) -> Result<()> {
     // Sync Merkle tree and get proof
     println!("Syncing Merkle tree from on-chain events...");
     let indexer = MerkleIndexer::sync(&args.chain.rpc_url, &args.chain.contract).await?;
-    let (siblings, path_indices, root) = indexer.proof_for(&commitment)?;
+    let (siblings, path_indices, root, _leaf_index) = indexer.proof_for(&commitment)?;
 
     println!("Merkle root: 0x{}", hex::encode(root));
 

@@ -68,10 +68,10 @@ echo ""
 echo "--- Step 4: Withdraw to fresh wallet ---"
 cargo run -p deplob-cli --release -- withdraw \
     --note /tmp/e2e_note2.json \
-    --recipient "$FRESH_WALLET_1" \
+    --recipient "$FRESH_WALLET_2" \
     --rpc-url "$ETH_RPC_URL" \
     --contract "$DEPLOB_ADDRESS" \
-    --private-key "$USER1_PRIVATE_KEY" \
+    --private-key "$USER2_PRIVATE_KEY" \
     $PROVE_FLAG
 
 # Cleanup

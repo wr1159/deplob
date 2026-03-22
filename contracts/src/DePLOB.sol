@@ -140,13 +140,15 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
         require(isKnownRoot(root), "Unknown root");
         require(supportedTokens[token], "Token not supported");
 
-        // Verify SP1 proof
-        bytes memory publicValues = abi.encode(
-            nullifierHash,
-            recipient,
-            token,
-            amount,
-            root
+        // Verify SP1 proof — public values must exactly match the SP1 program's
+        // commit_slice output: nullifier(32) || root(32) || recipient(20) || token(20)
+        // || amount(16 bytes little-endian, bincode u128)
+        bytes memory publicValues = abi.encodePacked(
+            nullifierHash,                      // 32 bytes
+            root,                               // 32 bytes
+            bytes20(address(recipient)),             // 20 bytes
+            bytes20(token),                          // 20 bytes
+            _toLittleEndian128(uint128(amount))  // 16 bytes LE
         );
         verifier.verifyProof(WITHDRAW_VKEY, publicValues, proof);
 
@@ -219,6 +221,19 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
             sellerNewCommitment,
             block.timestamp
         );
+    }
+
+    // ============ Internal Helpers ============
+
+    /// @notice Convert a uint128 to 16-byte little-endian representation (matches Rust bincode).
+    function _toLittleEndian128(uint128 v) internal pure returns (bytes16) {
+        // Reverse the 16 bytes
+        uint128 result;
+        for (uint256 i = 0; i < 16; i++) {
+            result = (result << 8) | uint128(uint8(v & 0xff));
+            v >>= 8;
+        }
+        return bytes16(result);
     }
 
     // ============ View Functions ============

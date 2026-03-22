@@ -103,12 +103,21 @@ async fn main() -> anyhow::Result<()> {
     // Execute to verify correctness
     let (mut output, _report) = client.execute(ELF_BYTES.into(), stdin.clone()).await?;
 
-    // Read and verify outputs
-    let output_nullifier: [u8; 32] = output.read::<[u8; 32]>();
-    let output_root: [u8; 32] = output.read::<[u8; 32]>();
-    let output_recipient: [u8; 20] = output.read::<[u8; 20]>();
-    let output_token: [u8; 20] = output.read::<[u8; 20]>();
-    let output_amount: u128 = output.read::<u128>();
+    // Read ABI-encoded public values (160 bytes)
+    let pv: Vec<u8> = output.read::<Vec<u8>>();
+    assert_eq!(pv.len(), 160, "Expected 160 bytes of ABI-encoded public values");
+
+    let mut output_nullifier = [0u8; 32];
+    let mut output_root = [0u8; 32];
+    let mut output_recipient = [0u8; 20];
+    let mut output_token = [0u8; 20];
+    output_nullifier.copy_from_slice(&pv[0..32]);
+    output_root.copy_from_slice(&pv[32..64]);
+    output_recipient.copy_from_slice(&pv[76..96]);
+    output_token.copy_from_slice(&pv[108..128]);
+    let mut amount_be = [0u8; 16];
+    amount_be.copy_from_slice(&pv[144..160]);
+    let output_amount = u128::from_be_bytes(amount_be);
 
     assert_eq!(nullifier, output_nullifier, "Nullifier mismatch");
     assert_eq!(root, output_root, "Root mismatch");

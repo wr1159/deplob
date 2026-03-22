@@ -8,9 +8,14 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol,
 };
-use deplob_core::CommitmentPreimage;
+use deplob_core::{CommitmentPreimage, TREE_DEPTH};
+use sp1_sdk::{HashableKey, ProveRequest, Prover, ProverClient, ProvingKey, SP1Stdin};
 
 use crate::{config::ChainArgs, indexer::MerkleIndexer};
+
+/// Withdraw program ELF — built by `cargo-prove prove build` in sp1-programs/withdraw/program.
+const ELF_BYTES: &[u8] =
+    include_bytes!("../../sp1-programs/withdraw/program/elf/riscv32im-succinct-zkvm-elf");
 
 sol! {
     #[allow(missing_docs)]
@@ -37,10 +42,14 @@ pub struct WithdrawArgs {
     #[arg(long)]
     pub recipient: String,
 
-    /// Path to a proof file (e.g. withdraw_proof.bin from withdraw-script).
-    /// If omitted, sends empty proof bytes (only works with MockSP1Verifier).
+    /// Proof source: "generate" to create an SP1 proof inline via the network,
+    /// a file path to load a pre-generated proof, or omit for empty proof (mock verifier).
     #[arg(long)]
     pub proof: Option<String>,
+
+    /// Proof system when using --proof generate (groth16 or plonk)
+    #[arg(long, default_value = "groth16")]
+    pub proof_type: String,
 
     #[command(flatten)]
     pub chain: ChainArgs,
@@ -73,29 +82,49 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
     // Sync Merkle tree indexer and get proof
     println!("Syncing Merkle tree from on-chain events...");
     let indexer = MerkleIndexer::sync(&args.chain.rpc_url, &args.chain.contract).await?;
-    let (_siblings, _path_indices, root) = indexer.proof_for(&commitment)?;
+    let (siblings, path_indices, root, leaf_index) = indexer.proof_for(&commitment)?;
 
     println!("Merkle root: 0x{}", hex::encode(root));
 
-    let proof = if let Some(proof_path) = &args.proof {
-        let proof_bytes = std::fs::read(proof_path)
-            .with_context(|| format!("failed to read proof file: {proof_path}"))?;
-        println!(
-            "Loaded proof from {} ({} bytes)",
-            proof_path,
-            proof_bytes.len()
-        );
-        Bytes::from(proof_bytes)
-    } else {
-        println!("No --proof file provided — using empty proof (mock verifier mode)");
-        Bytes::new()
+    let recipient_bytes_20: [u8; 20] = {
+        let addr: Address = args.recipient.parse().context("invalid recipient address")?;
+        *addr.0
+    };
+
+    let proof = match args.proof.as_deref() {
+        Some("generate") => {
+            generate_sp1_proof(
+                &nullifier_note,
+                &secret,
+                &siblings,
+                &path_indices,
+                leaf_index,
+                &root,
+                &recipient_bytes_20,
+                &token_bytes,
+                amount,
+                &args.proof_type,
+            )
+            .await?
+        }
+        Some(proof_path) => {
+            let proof_bytes = std::fs::read(proof_path)
+                .with_context(|| format!("failed to read proof file: {proof_path}"))?;
+            println!(
+                "Loaded proof from {} ({} bytes)",
+                proof_path,
+                proof_bytes.len()
+            );
+            Bytes::from(proof_bytes)
+        }
+        None => {
+            println!("No --proof provided, using empty proof (mock verifier mode)");
+            Bytes::new()
+        }
     };
 
     // Parse addresses
-    let recipient_addr: Address = args
-        .recipient
-        .parse()
-        .context("invalid recipient address")?;
+    let recipient_addr = Address::from(recipient_bytes_20);
     let token_addr: Address = token_hex.parse().context("invalid token address")?;
     let contract_addr: Address = args
         .chain
@@ -133,6 +162,83 @@ pub async fn run(args: WithdrawArgs) -> Result<()> {
     println!("Tokens sent to {}", args.recipient);
 
     Ok(())
+}
+
+/// Generate an SP1 ZK proof (Groth16 or Plonk) for the withdrawal circuit.
+///
+/// Uses `ProverClient::from_env()` which reads `SP1_PROVER` (network/local)
+/// and `SP1_PRIVATE_KEY` for network authentication.
+async fn generate_sp1_proof(
+    nullifier_note: &[u8; 32],
+    secret: &[u8; 32],
+    siblings: &[[u8; 32]],
+    path_indices: &[u8],
+    leaf_index: u32,
+    root: &[u8; 32],
+    recipient: &[u8; 20],
+    token: &[u8; 20],
+    amount: u128,
+    proof_type: &str,
+) -> Result<Bytes> {
+    // Convert to fixed-size arrays expected by SP1 stdin
+    let merkle_siblings: [[u8; 32]; TREE_DEPTH] = siblings
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("expected {TREE_DEPTH} siblings"))?;
+    let merkle_path_indices: [u8; TREE_DEPTH] = path_indices
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("expected {TREE_DEPTH} path indices"))?;
+
+    // Build SP1 stdin — must match the exact write order in withdraw/program/src/main.rs
+    let mut stdin = SP1Stdin::new();
+
+    // Private inputs
+    stdin.write(nullifier_note);
+    stdin.write(secret);
+    stdin.write(&merkle_siblings);
+    stdin.write(&merkle_path_indices);
+    stdin.write(&leaf_index);
+
+    // Public inputs
+    stdin.write(root);
+    stdin.write(recipient);
+    stdin.write(token);
+    stdin.write(&amount);
+
+    println!("Initializing SP1 prover...");
+    let client = ProverClient::from_env().await;
+
+    let pk = client
+        .setup(ELF_BYTES.into())
+        .await
+        .context("SP1 setup failed")?;
+    let vk = pk.verifying_key().clone();
+    println!("Verification key: {}", vk.bytes32());
+
+    let proof_bytes = match proof_type {
+        "plonk" => {
+            println!("Generating Plonk proof via SP1 network...");
+            let proof = client
+                .prove(&pk, stdin)
+                .plonk()
+                .await
+                .context("Plonk proof generation failed")?;
+            println!("Plonk proof generated successfully!");
+            proof.bytes()
+        }
+        _ => {
+            println!("Generating Groth16 proof via SP1 network...");
+            let proof = client
+                .prove(&pk, stdin)
+                .groth16()
+                .await
+                .context("Groth16 proof generation failed")?;
+            println!("Groth16 proof generated successfully!");
+            proof.bytes()
+        }
+    };
+
+    println!("Proof size: {} bytes", proof_bytes.len());
+    Ok(Bytes::from(proof_bytes))
 }
 
 fn parse_hex32(s: &str) -> Result<[u8; 32]> {

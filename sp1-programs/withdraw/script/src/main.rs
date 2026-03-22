@@ -216,12 +216,18 @@ async fn main() -> anyhow::Result<()> {
         report.total_instruction_count()
     );
 
-    // Read outputs from SP1 program
-    let nullifier: [u8; 32] = output.read::<[u8; 32]>();
-    let root_out: [u8; 32] = output.read::<[u8; 32]>();
-    let recipient_out: [u8; 20] = output.read::<[u8; 20]>();
-    let token_out: [u8; 20] = output.read::<[u8; 20]>();
-    let amount_out: u128 = output.read::<u128>();
+    // Read public values committed individually by the SP1 program
+    // Each value was committed via commit_slice, read as raw bytes
+    let mut nullifier = [0u8; 32];
+    let mut root_out = [0u8; 32];
+    let mut recipient_out = [0u8; 20];
+    let mut token_out = [0u8; 20];
+
+    output.read_slice(&mut nullifier);
+    output.read_slice(&mut root_out);
+    output.read_slice(&mut recipient_out);
+    output.read_slice(&mut token_out);
+    let amount_out: u128 = output.read();
 
     println!("\nSP1 Program Outputs:");
     println!("  nullifier: 0x{}", hex::encode(nullifier));

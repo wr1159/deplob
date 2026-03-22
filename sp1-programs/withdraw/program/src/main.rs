@@ -58,10 +58,11 @@ pub fn main() {
     );
 
     // ============ Commit Public Outputs ============
-    // These are verified by the smart contract
-    sp1_zkvm::io::commit(&nullifier);
-    sp1_zkvm::io::commit(&expected_root);
-    sp1_zkvm::io::commit(&recipient);
-    sp1_zkvm::io::commit(&token);
+    // Commit each value individually. The script reads them in the same order.
+    // ABI encoding for on-chain verification is done in the script, not here.
+    sp1_zkvm::io::commit_slice(&nullifier);
+    sp1_zkvm::io::commit_slice(&expected_root);
+    sp1_zkvm::io::commit_slice(&recipient);
+    sp1_zkvm::io::commit_slice(&token);
     sp1_zkvm::io::commit(&amount);
 }
