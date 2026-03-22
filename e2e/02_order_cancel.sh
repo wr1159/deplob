@@ -11,7 +11,9 @@ set -euo pipefail
 
 TIER="${TIER:-local}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+set -a
 source "$SCRIPT_DIR/.env.$TIER"
+set +a
 
 echo "============================================"
 echo "  Scenario 2: Deposit → Order → Cancel → Withdraw"

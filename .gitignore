@@ -4,3 +4,4 @@ cache/
 target/
 node_modules/
 .env.sepolia
+e2e/.env.sepolia
