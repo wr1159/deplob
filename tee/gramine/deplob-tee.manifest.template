@@ -1,8 +1,11 @@
 # Gramine manifest for DePLOB TEE matching engine
 # See: https://gramine.readthedocs.io/en/stable/manifest-syntax.html
 
+[libos]
+entrypoint = "deplob-tee"
+
 [loader]
-entrypoint = "file:deplob-tee"
+entrypoint = { uri = "file:{{ gramine.libos }}" }
 argv = ["deplob-tee"]
 env.LD_LIBRARY_PATH = "/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
 
@@ -20,6 +23,11 @@ mounts = [
     # The attestation signing key is stored here and can only be
     # unsealed by the same enclave code (same MRENCLAVE).
     { path = "/sealed", uri = "file:sealed/", type = "encrypted", key_name = "_sgx_mrenclave" },
+    # DNS resolution and SSL certs
+    { path = "/etc/resolv.conf", uri = "file:/etc/resolv.conf" },
+    { path = "/etc/hosts", uri = "file:/etc/hosts" },
+    { path = "/etc/nsswitch.conf", uri = "file:/etc/nsswitch.conf" },
+    { path = "/etc/ssl/certs", uri = "file:/etc/ssl/certs" },
 ]
 
 [sgx]
@@ -27,10 +35,18 @@ enclave_size = "256M"
 max_threads = 32
 debug = false
 edmm_enable = false
-remote_attestation = "dcap"
+remote_attestation = "none"
 
 trusted_files = [
     "file:deplob-tee",
     "file:{{ gramine.libos }}",
     "file:{{ gramine.runtimedir() }}/",
+    "file:/usr/lib/x86_64-linux-gnu/",
+]
+
+allowed_files = [
+    "file:/etc/resolv.conf",
+    "file:/etc/hosts",
+    "file:/etc/nsswitch.conf",
+    "file:/etc/ssl/certs/",
 ]
