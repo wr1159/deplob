@@ -1,11 +1,8 @@
 # Gramine manifest for DePLOB TEE matching engine
 # See: https://gramine.readthedocs.io/en/stable/manifest-syntax.html
 
-[libos]
-entrypoint = "deplob-tee"
-
 [loader]
-entrypoint = "file:{{ gramine.libos }}"
+entrypoint = "file:deplob-tee"
 argv = ["deplob-tee"]
 env.LD_LIBRARY_PATH = "/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
 
