@@ -49,20 +49,32 @@ async fn main() {
         }
     };
 
-    // Build attestation provider
+    // Build attestation provider:
+    //   1. TEE_ATTESTATION_KEY env var → Phase A (ECDSA from env)
+    //   2. /sealed/attestation.key exists or can be created → Phase B (SGX sealed key)
+    //   3. Neither → mock (empty attestation bytes)
     let attestation: Arc<dyn AttestationProvider> = match env::var("TEE_ATTESTATION_KEY") {
         Ok(key) if !key.is_empty() => {
             let provider = EcdsaAttestationProvider::new(&key)
                 .expect("failed to initialise EcdsaAttestationProvider");
             tracing::info!(
-                "Attestation signing address: {}",
+                "Attestation signing address (env): {}",
+                provider.signing_address().unwrap()
+            );
+            Arc::new(provider)
+        }
+        _ if std::path::Path::new("/sealed").exists() => {
+            let provider = EcdsaAttestationProvider::from_sealed("/sealed/attestation.key")
+                .expect("failed to initialise sealed EcdsaAttestationProvider");
+            tracing::info!(
+                "Attestation signing address (sealed): {}",
                 provider.signing_address().unwrap()
             );
             Arc::new(provider)
         }
         _ => {
             tracing::warn!(
-                "TEE_ATTESTATION_KEY not set — using mock attestation (empty bytes)"
+                "TEE_ATTESTATION_KEY not set and /sealed not found — using mock attestation (empty bytes)"
             );
             Arc::new(MockAttestationProvider)
         }

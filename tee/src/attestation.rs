@@ -1,8 +1,12 @@
 //! Settlement attestation — signs settlement data with a secp256k1 key.
 //!
-//! Two implementations:
+//! Three construction modes:
 //! - `MockAttestationProvider` — returns empty bytes (Tier 1–3 and tests)
-//! - `EcdsaAttestationProvider` — signs with a private key (Tier 4)
+//! - `EcdsaAttestationProvider::new(key)` — from env var `TEE_ATTESTATION_KEY` (Phase A)
+//! - `EcdsaAttestationProvider::from_sealed(path)` — load or generate key sealed to
+//!   `/sealed/attestation.key` (Phase B — SGX enclave with Gramine)
+
+use std::path::Path;
 
 use anyhow::Context;
 
@@ -48,11 +52,48 @@ pub struct EcdsaAttestationProvider {
     signer: PrivateKeySigner,
 }
 
+const SEALED_KEY_PATH: &str = "/sealed/attestation.key";
+
 impl EcdsaAttestationProvider {
+    /// Construct from a hex-encoded private key (Phase A — env var).
     pub fn new(private_key: &str) -> anyhow::Result<Self> {
         let signer: PrivateKeySigner = private_key
             .parse()
             .context("invalid TEE_ATTESTATION_KEY")?;
+        Ok(Self { signer })
+    }
+
+    /// Load or generate a sealed attestation key (Phase B — SGX enclave).
+    ///
+    /// If the file exists, reads and parses the hex key.
+    /// If not, generates a new random key and writes it to the sealed path.
+    /// Inside a Gramine SGX enclave, `/sealed/` is encrypted with the
+    /// MRENCLAVE-derived key — the file can only be read by the same enclave.
+    pub fn from_sealed(path: &str) -> anyhow::Result<Self> {
+        let sealed = Path::new(path);
+
+        let signer = if sealed.exists() {
+            let hex_key = std::fs::read_to_string(sealed)
+                .context("failed to read sealed attestation key")?;
+            let hex_key = hex_key.trim();
+            hex_key
+                .parse::<PrivateKeySigner>()
+                .context("failed to parse sealed attestation key")?
+        } else {
+            // Generate a new key and persist it
+            let signer = PrivateKeySigner::random();
+            let key_hex = format!("0x{}", hex::encode(signer.credential().to_bytes()));
+            // Ensure parent directory exists
+            if let Some(parent) = sealed.parent() {
+                std::fs::create_dir_all(parent)
+                    .context("failed to create sealed key directory")?;
+            }
+            std::fs::write(sealed, &key_hex)
+                .context("failed to write sealed attestation key")?;
+            tracing::info!("Generated new attestation key, sealed to {path}");
+            signer
+        };
+
         Ok(Self { signer })
     }
 }
