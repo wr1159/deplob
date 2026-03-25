@@ -35,7 +35,7 @@ enclave_size = "256M"
 max_threads = 32
 debug = false
 edmm_enable = false
-remote_attestation = "none"
+remote_attestation = "dcap"
 
 trusted_files = [
     "file:deplob-tee",
