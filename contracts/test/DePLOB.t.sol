@@ -6,6 +6,7 @@ import {DePLOB} from "../src/DePLOB.sol";
 import {IDePLOB} from "../src/interfaces/IDePLOB.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 import {MockSP1Verifier} from "./mocks/MockSP1Verifier.sol";
+import {MockDcapVerifier} from "./mocks/MockDcapVerifier.sol";
 
 contract DePLOBTest is Test {
     DePLOB public deplob;
@@ -451,5 +452,167 @@ contract DePLOBTest is Test {
     function test_IsSpentNullifier() public view {
         bytes32 nullifier = keccak256("random nullifier");
         assertFalse(deplob.isSpentNullifier(nullifier));
+    }
+
+    // ============ DCAP Enclave Registration Tests ============
+
+    bytes32 constant TEST_MRENCLAVE = bytes32(uint256(0xdeadbeef));
+
+    /// @dev Build a fake 480-byte DCAP quote with MRENCLAVE at offset 112
+    ///      and signing address at first 20 bytes of REPORTDATA (offset 368).
+    function _buildFakeQuote(bytes32 mrenclave, address signingAddr) internal pure returns (bytes memory) {
+        bytes memory quote = new bytes(480);
+        // Place MRENCLAVE at absolute offset 112
+        assembly {
+            mstore(add(add(quote, 32), 112), mrenclave)
+        }
+        // Place signing address at absolute offset 368 (left-aligned in 32 bytes)
+        bytes32 addrPadded = bytes32(uint256(uint160(signingAddr)) << 96);
+        assembly {
+            mstore(add(add(quote, 32), 368), addrPadded)
+        }
+        return quote;
+    }
+
+    function test_RegisterEnclaveSuccess() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        deplob.setDcapVerifier(address(mockVerifier));
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        address expectedSigner = makeAddr("enclave signer");
+        bytes memory quote = _buildFakeQuote(TEST_MRENCLAVE, expectedSigner);
+
+        vm.expectEmit(true, true, false, true);
+        emit IDePLOB.EnclaveRegistered(expectedSigner, TEST_MRENCLAVE);
+
+        deplob.registerEnclave(quote);
+
+        assertEq(deplob.enclaveSigningKey(), expectedSigner);
+    }
+
+    function test_RegisterEnclaveFailsVerification() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        mockVerifier.setShouldPass(false);
+        deplob.setDcapVerifier(address(mockVerifier));
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        bytes memory quote = _buildFakeQuote(TEST_MRENCLAVE, makeAddr("signer"));
+
+        vm.expectRevert("DCAP verification failed");
+        deplob.registerEnclave(quote);
+    }
+
+    function test_RegisterEnclaveMrenclavesMismatch() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        deplob.setDcapVerifier(address(mockVerifier));
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        bytes32 wrongMrenclave = bytes32(uint256(0xbaadf00d));
+        bytes memory quote = _buildFakeQuote(wrongMrenclave, makeAddr("signer"));
+
+        vm.expectRevert("MRENCLAVE mismatch");
+        deplob.registerEnclave(quote);
+    }
+
+    function test_RegisterEnclaveNoVerifierSet() public {
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        bytes memory quote = _buildFakeQuote(TEST_MRENCLAVE, makeAddr("signer"));
+
+        vm.expectRevert("DCAP verifier not set");
+        deplob.registerEnclave(quote);
+    }
+
+    function test_RegisterEnclaveNoMrenclaveSet() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        deplob.setDcapVerifier(address(mockVerifier));
+
+        bytes memory quote = _buildFakeQuote(TEST_MRENCLAVE, makeAddr("signer"));
+
+        vm.expectRevert("Trusted MRENCLAVE not set");
+        deplob.registerEnclave(quote);
+    }
+
+    function test_RegisterEnclaveQuoteTooShort() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        deplob.setDcapVerifier(address(mockVerifier));
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        bytes memory shortQuote = new bytes(400);
+
+        vm.expectRevert("Quote too short");
+        deplob.registerEnclave(shortQuote);
+    }
+
+    function test_RegisterEnclaveInvalidSigningKey() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        deplob.setDcapVerifier(address(mockVerifier));
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        // address(0) in REPORTDATA
+        bytes memory quote = _buildFakeQuote(TEST_MRENCLAVE, address(0));
+
+        vm.expectRevert("Invalid signing key");
+        deplob.registerEnclave(quote);
+    }
+
+    function test_RegisterEnclaveThenSettle() public {
+        // 1. Register enclave via DCAP
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+        deplob.setDcapVerifier(address(mockVerifier));
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        address enclaveSigner = vm.addr(ATTESTATION_PK);
+        bytes memory quote = _buildFakeQuote(TEST_MRENCLAVE, enclaveSigner);
+        deplob.registerEnclave(quote);
+
+        assertEq(deplob.enclaveSigningKey(), enclaveSigner);
+
+        // 2. Settle using ecrecover with the registered key
+        deplob.setRequireAttestation(true);
+
+        bytes32 buyerNullifier = keccak256("dcap buyer");
+        bytes32 sellerNullifier = keccak256("dcap seller");
+        bytes32 buyerCommitment = keccak256("dcap buyer commit");
+        bytes32 sellerCommitment = keccak256("dcap seller commit");
+
+        bytes memory attestation = _signSettlement(
+            buyerNullifier, sellerNullifier, buyerCommitment, sellerCommitment
+        );
+
+        vm.prank(teeOperator);
+        deplob.settleMatch(
+            buyerNullifier,
+            sellerNullifier,
+            buyerCommitment,
+            sellerCommitment,
+            attestation,
+            ""
+        );
+
+        assertTrue(deplob.isSpentNullifier(buyerNullifier));
+        assertTrue(deplob.isSpentNullifier(sellerNullifier));
+    }
+
+    function test_SetDcapVerifierOnlyOwner() public {
+        MockDcapVerifier mockVerifier = new MockDcapVerifier();
+
+        vm.prank(alice);
+        vm.expectRevert("Not owner");
+        deplob.setDcapVerifier(address(mockVerifier));
+
+        // Owner can set
+        deplob.setDcapVerifier(address(mockVerifier));
+        assertEq(address(deplob.dcapVerifier()), address(mockVerifier));
+    }
+
+    function test_SetTrustedMrenclaveOnlyOwner() public {
+        vm.prank(alice);
+        vm.expectRevert("Not owner");
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+
+        // Owner can set
+        deplob.setTrustedMrEnclave(TEST_MRENCLAVE);
+        assertEq(deplob.trustedMrEnclave(), TEST_MRENCLAVE);
     }
 }

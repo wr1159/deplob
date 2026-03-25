@@ -81,6 +81,22 @@ interface IDePLOB {
     /// @notice Toggle whether attestation is required for settlement
     function setRequireAttestation(bool _required) external;
 
+    /// @notice Set the trusted MRENCLAVE for enclave registration
+    function setTrustedMrEnclave(bytes32 _mrenclave) external;
+
+    /// @notice Set the Automata DCAP verifier address
+    function setDcapVerifier(address _dcapVerifier) external;
+
+    // ============ Enclave Registration ============
+
+    /// @notice Register an enclave by verifying a DCAP attestation quote on-chain
+    /// @param dcapQuote The raw DCAP v3 quote bytes from the enclave
+    function registerEnclave(bytes calldata dcapQuote) external payable;
+
+    // ============ Events (Enclave Registration) ============
+
+    event EnclaveRegistered(address indexed signingKey, bytes32 indexed mrenclave);
+
     // ============ View Functions ============
 
     function isKnownRoot(bytes32 root) external view returns (bool);

@@ -98,6 +98,29 @@ impl EcdsaAttestationProvider {
     }
 }
 
+impl EcdsaAttestationProvider {
+    /// Write the signing address into Gramine's user_report_data device.
+    ///
+    /// The first 20 bytes of REPORTDATA will contain the Ethereum address;
+    /// remaining 44 bytes are zeroed. This gets embedded in the DCAP quote
+    /// so `registerEnclave()` on-chain can extract the signing address.
+    ///
+    /// Silently skips if `/dev/attestation/user_report_data` does not exist
+    /// (i.e. not running inside a Gramine SGX enclave).
+    pub fn write_report_data(&self) -> anyhow::Result<()> {
+        let report_data_path = Path::new("/dev/attestation/user_report_data");
+        if report_data_path.exists() {
+            let mut data = [0u8; 64];
+            let addr = self.signer.address();
+            data[..20].copy_from_slice(addr.as_slice());
+            std::fs::write(report_data_path, &data)
+                .context("failed to write user_report_data")?;
+            tracing::info!("Wrote signing address to /dev/attestation/user_report_data");
+        }
+        Ok(())
+    }
+}
+
 impl AttestationProvider for EcdsaAttestationProvider {
     fn sign_settlement(&self, data: &SettlementData) -> anyhow::Result<Vec<u8>> {
         let hash = settlement_hash(data);

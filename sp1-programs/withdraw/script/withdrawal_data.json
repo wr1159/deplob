@@ -1,7 +1,7 @@
 {
   "amount": "1000000000000000000",
-  "nullifier": "0x2f3bd424adafd7a4a4f45bd7468436538386672e62fc2c75459c65cf20f72026",
-  "recipient": "0xd6b58f3132a316bb898f1d8bccab7017c668df15",
-  "root": "0xa2fe649482610a14212bbb03a44bc066477423b8f605eb890103874059ed8809",
+  "nullifier": "0x7f2d06fa8613cd32653c33da38d32ec88eb297ee5967e84cb51eca369de1bec0",
+  "recipient": "0x1297e74b5bdb6f4e461115715a1f0cb6a1ca8b25",
+  "root": "0x2b0740842da4eef574980f57756551f6ac570624f1877a3bbb171d27e95466e7",
   "token": "0xabababababababababababababababababababab"
 }

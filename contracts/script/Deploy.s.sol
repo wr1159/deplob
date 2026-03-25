@@ -133,20 +133,123 @@ contract DeploySepoliaScript is Script {
             console.log("Minted to user2:", user2);
         } catch {}
 
-        // Set enclave signing key if provided (for attestation verification)
+        // Set up DCAP verifier (Automata on Sepolia)
+        address dcapVerifier = 0x27188ABA3a26CBb806eF4C67de9b05D7d792EC10;
+        deplob.setDcapVerifier(dcapVerifier);
+        console.log("DCAP Verifier:", dcapVerifier);
+
+        // Set trusted MRENCLAVE if provided
+        try vm.envBytes32("TRUSTED_MRENCLAVE") returns (bytes32 mrenclave) {
+            deplob.setTrustedMrEnclave(mrenclave);
+            console.log("Trusted MRENCLAVE:", vm.toString(mrenclave));
+        } catch {
+            console.log(
+                "TRUSTED_MRENCLAVE not set - registerEnclave won't work until set"
+            );
+        }
+
+        // Set enclave signing key if provided (manual fallback for attestation verification)
         try vm.envAddress("ENCLAVE_SIGNING_KEY") returns (address enclaveKey) {
             deplob.setEnclaveSigningKey(enclaveKey);
             deplob.setRequireAttestation(true);
             console.log("Enclave signing key:", enclaveKey);
             console.log("Attestation required: true");
         } catch {
-            console.log("ENCLAVE_SIGNING_KEY not set - attestation not required");
+            console.log(
+                "ENCLAVE_SIGNING_KEY not set - use registerEnclave() with DCAP quote"
+            );
         }
 
         console.log("=== Deployed (Sepolia) ===");
         console.log("Verifier:", verifierAddr);
         console.log("Token A (TKA):", address(tokenA));
         console.log("Token B (TKB):", address(tokenB));
+        console.log("DePLOB:", address(deplob));
+        console.log("TEE Operator:", teeOperator);
+        console.log("Withdraw VKey:", vm.toString(withdrawVKey));
+
+        vm.stopBroadcast();
+    }
+}
+
+// ============ Sepolia Upgrade (reuse existing tokens) ============
+
+/// @notice Deploy only a new DePLOB contract on Sepolia, reusing existing tokens.
+///         Use this when upgrading the contract without redeploying tokens.
+///
+/// Required env vars:
+///   DEPLOYER_PRIVATE_KEY  — deployer + owner
+///   TEE_OPERATOR_ADDRESS  — TEE wallet address
+///   TOKEN_A               — existing Token A address
+///   TOKEN_B               — existing Token B address
+///
+/// Optional env vars:
+///   SP1_VERIFIER_ADDRESS  — real SP1 verifier (deploys mock if not set)
+///   WITHDRAW_VKEY         — required when using real verifier
+///   TRUSTED_MRENCLAVE     — set to enable registerEnclave()
+///   ENCLAVE_SIGNING_KEY   — manual fallback (skips DCAP)
+contract UpgradeSepoliaScript is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address teeOperator = vm.envAddress("TEE_OPERATOR_ADDRESS");
+        address tokenA = vm.envAddress("TOKEN_A");
+        address tokenB = vm.envAddress("TOKEN_B");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Determine verifier
+        address verifierAddr;
+        bytes32 withdrawVKey;
+
+        try vm.envAddress("SP1_VERIFIER_ADDRESS") returns (address addr) {
+            verifierAddr = addr;
+            withdrawVKey = vm.envBytes32("WITHDRAW_VKEY");
+            console.log("Using REAL SP1 verifier:", verifierAddr);
+        } catch {
+            MockSP1Verifier mockVerifier = new MockSP1Verifier();
+            verifierAddr = address(mockVerifier);
+            withdrawVKey = bytes32(uint256(2));
+            console.log("Using MOCK SP1 verifier:", verifierAddr);
+        }
+
+        // Deploy new DePLOB
+        DePLOB deplob = new DePLOB(verifierAddr, withdrawVKey, teeOperator);
+
+        // Whitelist existing tokens
+        deplob.addSupportedToken(tokenA);
+        deplob.addSupportedToken(tokenB);
+
+        // Set up DCAP verifier (Automata on Sepolia)
+        address dcapVerifier = 0x27188ABA3a26CBb806eF4C67de9b05D7d792EC10;
+        deplob.setDcapVerifier(dcapVerifier);
+        console.log("DCAP Verifier:", dcapVerifier);
+
+        // Set trusted MRENCLAVE if provided
+        try vm.envBytes32("TRUSTED_MRENCLAVE") returns (bytes32 mrenclave) {
+            deplob.setTrustedMrEnclave(mrenclave);
+            console.log("Trusted MRENCLAVE:", vm.toString(mrenclave));
+        } catch {
+            console.log(
+                "TRUSTED_MRENCLAVE not set - registerEnclave won't work until set"
+            );
+        }
+
+        // Set enclave signing key if provided (manual fallback)
+        try vm.envAddress("ENCLAVE_SIGNING_KEY") returns (address enclaveKey) {
+            deplob.setEnclaveSigningKey(enclaveKey);
+            deplob.setRequireAttestation(true);
+            console.log("Enclave signing key:", enclaveKey);
+            console.log("Attestation required: true");
+        } catch {
+            console.log(
+                "ENCLAVE_SIGNING_KEY not set - use registerEnclave() with DCAP quote"
+            );
+        }
+
+        console.log("=== Deployed (Sepolia Upgrade) ===");
+        console.log("Verifier:", verifierAddr);
+        console.log("Token A:", tokenA);
+        console.log("Token B:", tokenB);
         console.log("DePLOB:", address(deplob));
         console.log("TEE Operator:", teeOperator);
         console.log("Withdraw VKey:", vm.toString(withdrawVKey));

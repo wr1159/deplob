@@ -66,6 +66,8 @@ async fn main() {
         _ if std::path::Path::new("/sealed").exists() => {
             let provider = EcdsaAttestationProvider::from_sealed("/sealed/attestation.key")
                 .expect("failed to initialise sealed EcdsaAttestationProvider");
+            // Write signing address to Gramine's REPORTDATA for DCAP quote
+            provider.write_report_data().ok();
             tracing::info!(
                 "Attestation signing address (sealed): {}",
                 provider.signing_address().unwrap()

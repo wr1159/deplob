@@ -1,3 +1,4 @@
+pub mod attestation;
 pub mod health;
 pub mod orders;
 pub mod settlements;
@@ -18,5 +19,6 @@ pub fn router(state: SharedState) -> Router {
             "/v1/settlements/:deposit_nullifier",
             get(settlements::get_settlement),
         )
+        .route("/v1/attestation/quote", get(attestation::get_quote))
         .with_state(state)
 }

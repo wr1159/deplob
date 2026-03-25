@@ -8,6 +8,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/// @notice Minimal interface for Automata's on-chain DCAP attestation verifier
+interface IAutomataDcapVerifier {
+    function verifyAndAttestOnChain(bytes calldata rawQuote)
+        external
+        payable
+        returns (bool success, bytes memory output);
+}
+
 /// @title DePLOB
 /// @notice Decentralized Private Limit Order Book - Shielded Pool Contract
 /// @dev Implements privacy-preserving deposits, withdrawals, and order management
@@ -41,6 +49,12 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
 
     /// @notice Whether attestation is required for settlement
     bool public requireAttestation;
+
+    /// @notice Trusted MRENCLAVE value for enclave registration
+    bytes32 public trustedMrEnclave;
+
+    /// @notice Automata DCAP attestation verifier contract
+    IAutomataDcapVerifier public dcapVerifier;
 
     /// @notice Contract owner
     address public owner;
@@ -97,10 +111,59 @@ contract DePLOB is IDePLOB, MerkleTreeWithHistory, ReentrancyGuard {
         requireAttestation = _required;
     }
 
+    /// @notice Set the trusted MRENCLAVE for enclave registration
+    function setTrustedMrEnclave(bytes32 _mrenclave) external onlyOwner {
+        trustedMrEnclave = _mrenclave;
+    }
+
+    /// @notice Set the Automata DCAP verifier address
+    function setDcapVerifier(address _dcapVerifier) external onlyOwner {
+        dcapVerifier = IAutomataDcapVerifier(_dcapVerifier);
+    }
+
     /// @notice Transfer ownership
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "Invalid owner");
         owner = newOwner;
+    }
+
+    // ============ Enclave Registration ============
+
+    /// @notice Register an enclave by verifying a DCAP attestation quote on-chain.
+    ///         Extracts MRENCLAVE and signing address from the verified quote.
+    /// @param dcapQuote The raw DCAP v3 quote bytes from the enclave
+    function registerEnclave(bytes calldata dcapQuote) external payable {
+        require(address(dcapVerifier) != address(0), "DCAP verifier not set");
+        require(trustedMrEnclave != bytes32(0), "Trusted MRENCLAVE not set");
+
+        // Verify the quote via Automata's on-chain verifier (payable — may charge a fee)
+        (bool success, ) = dcapVerifier.verifyAndAttestOnChain{value: msg.value}(dcapQuote);
+        require(success, "DCAP verification failed");
+
+        // DCAP v3 quote layout:
+        //   Bytes 0-47:   Quote Header (48 bytes)
+        //   Bytes 48-431: Report Body (384 bytes)
+        //     - Report Body offset 64:  MRENCLAVE (32 bytes) → absolute offset 112
+        //     - Report Body offset 320: REPORTDATA (64 bytes) → absolute offset 368
+        require(dcapQuote.length >= 432, "Quote too short");
+
+        // Extract MRENCLAVE (32 bytes at absolute offset 112)
+        bytes32 mrenclave;
+        assembly {
+            mrenclave := calldataload(add(dcapQuote.offset, 112))
+        }
+        require(mrenclave == trustedMrEnclave, "MRENCLAVE mismatch");
+
+        // Extract signing address from first 20 bytes of REPORTDATA (absolute offset 368)
+        address signingKey;
+        assembly {
+            signingKey := shr(96, calldataload(add(dcapQuote.offset, 368)))
+        }
+        require(signingKey != address(0), "Invalid signing key");
+
+        enclaveSigningKey = signingKey;
+
+        emit EnclaveRegistered(signingKey, mrenclave);
     }
 
     // ============ Deposit ============
