@@ -471,7 +471,7 @@ The circuit produces a Groth16 proof $\pi$ of approximately 200 bytes. The user 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\linewidth]{tee-architecture.png}
-    \caption{TEE architecture for DePLOB. The Gramine LibOS runs the unmodified \texttt{deplob-tee} Rust binary inside an Intel SGX enclave (EPC).}
+    \caption{TEE architecture for DePLOB. The Gramine LibOS runs the unmodified \texttt{deplob-tee} Rust binary inside an Intel SGX enclave.}
     \label{fig:tee_architecture}
 \end{figure}
 
@@ -506,9 +506,9 @@ The enclave's behaviour is governed by a Gramine manifest template, which specif
 The process for building and deploying the signed enclave consists of four steps:
 
 \begin{enumerate}
-    \item \texttt{cargo build --release -p deplob-tee} — compile the Rust matching engine to a native x86-64 binary.
-    \item \texttt{gramine-manifest} — instantiate the manifest template with Gramine's runtime library paths, producing a concrete \texttt{deplob-tee.manifest} file.
-    \item \texttt{gramine-sgx-sign --key enclave-key.pem} — sign the enclave, measuring all trusted files listed in the manifest. This produces \texttt{deplob-tee.manifest.sgx} (the signed manifest) and \texttt{deplob-tee.sig} (containing the MRENCLAVE digest that uniquely identifies this exact binary and configuration).
+    \item \texttt{cargo build --release -p deplob-tee} compiles the Rust matching engine to a native x86-64 binary.
+    \item \texttt{gramine-manifest} instantiates the manifest template with Gramine's runtime library paths, producing a concrete \texttt{deplob-tee.manifest} file.
+    \item \texttt{gramine-sgx-sign --key enclave-key.pem} signs the enclave, measuring all trusted files listed in the manifest. This produces \texttt{deplob-tee.manifest.sgx} (the signed manifest) and \texttt{deplob-tee.sig} (containing the MRENCLAVE digest that uniquely identifies this exact binary and configuration).
     \item The MRENCLAVE digest from \texttt{deplob-tee.sig} is extracted and recorded. When the operator calls \texttt{registerEnclave(dcapQuote)}, the contract verifies that the DCAP quote's MRENCLAVE field matches this expected digest before authorising the enclave's signing key.
 \end{enumerate}
 
@@ -535,7 +535,7 @@ On its first start, the running enclave generates a fresh secp256k1 keypair, der
 
 \subsection{Design Choices}
 
-\textbf{TEE for matching, ZK for withdrawal.} The most fundamental architectural decision is the allocation of roles between the TEE and the ZK proof system. Order matching requires mutable shared state — the order book — and must respond to incoming orders with sub-second latency to be usable. ZK circuits are stateless and require a new proof for every state transition; generating a Groth16 proof takes approximately one minute, which is impractical for interactive order placement. The TEE, by contrast, can maintain the order book in-memory and match orders in microseconds. Conversely, withdrawal must be unconditionally trustless: users must be able to reclaim their funds even if the TEE is offline, hostile, or has been compromised. Fully TEE-based systems such as Secret Network make fund safety contingent on the enclave's integrity, meaning a successful hardware attack can lead to fund theft. A ZK proof of Merkle inclusion avoids this as any party can verify it on-chain without any cooperation from the TEE, ensuring fund safety is independent of the TEE's trustworthiness.
+\textbf{TEE for matching, ZK for withdrawal.} The most fundamental architectural decision is the allocation of roles between the TEE and the ZK proof system. Order matching requires mutable shared state (the order book) and must respond to incoming orders with sub-second latency to be usable. ZK circuits are stateless and require a new proof for every state transition; generating a Groth16 proof takes approximately one minute, which is impractical for interactive order placement. The TEE, by contrast, can maintain the order book in-memory and match orders in microseconds. Conversely, withdrawal must be unconditionally trustless: users must be able to reclaim their funds even if the TEE is offline, hostile, or has been compromised. Fully TEE-based systems such as Secret Network make fund safety contingent on the enclave's integrity, meaning a successful hardware attack can lead to fund theft. A ZK proof of Merkle inclusion avoids this as any party can verify it on-chain without any cooperation from the TEE, ensuring fund safety is independent of the TEE's trustworthiness.
 
 \textbf{Shielded pool over an account model.} An account-based privacy model (as used in systems with private balances per address) would require that the protocol maintain a mapping from addresses to encrypted balances — a mapping that, even if encrypted, anchors each user's trading activity to a persistent pseudonymous identity. The shielded pool model, following Tornado Cash, avoids this: each deposit generates a fresh, random commitment with no link to any address, and the withdrawal recipient is chosen freely at withdrawal time. This naturally achieves deposit-withdrawal unlinkability without any address-specific state on-chain, at the cost of requiring users to manage their deposit notes locally.
 
@@ -762,11 +762,11 @@ Fund safety under TEE compromise & ZK-only withdrawal path & Reduces to ZK sound
 
 \textbf{Multi-TEE replication and BFT consensus.} Replacing the single TEE instance with a network of $N$ TEE nodes, each independently attested via DCAP, would substantially improve liveness and censorship resistance. A Byzantine Fault Tolerant (BFT) consensus protocol among TEE nodes — for example, a variant of HotStuff or PBFT — would ensure that matching continues as long as $\lfloor(N-1)/3\rfloor$ nodes are online and honest. Each node would independently register its enclave key on-chain, and the settlement contract would require a threshold of signatures from registered enclaves rather than a single signature. This removes the current single point of failure and makes it significantly harder for any operator to selectively censor orders.
 
-\textbf{Batch settlement.} The current protocol settles each matched trade in a separate \texttt{settleMatch()} transaction, incurring approximately 368k gas per settlement. Since a significant portion of this cost is fixed overhead (contract dispatch, signature verification, storage writes), batching $M$ settlements into a single call would amortise the fixed cost over many trades, reducing the per-trade marginal gas significantly. This optimisation is particularly valuable during periods of high order flow and would make DePLOB more competitive in terms of throughput-adjusted cost.
+\textbf{Batch settlement.} The current protocol settles each matched trade in a separate \\ \texttt{settleMatch()} transaction, incurring approximately 368k gas per settlement. Since a significant portion of this cost is fixed overhead (contract dispatch, signature verification, storage writes), batching $M$ settlements into a single call would amortise the fixed cost over many trades, reducing the per-trade marginal gas significantly. This optimisation is particularly valuable during periods of high order flow and would make DePLOB more competitive in terms of throughput-adjusted cost.
 
-\textbf{Withdrawal proof aggregation.} Each withdrawal currently requires an individual Groth16 proof verification costing approximately 270k gas. Aggregating multiple withdrawal proofs into a single on-chain verification — using proof recursion (a SNARK proving the validity of $M$ inner SNARKs) — could reduce the amortised per-withdrawal verification cost to near-constant. The SP1 framework already supports recursive proof composition, making this a natural extension of the existing infrastructure.
+\textbf{Withdrawal proof aggregation.} Each withdrawal currently requires an individual Groth16 proof verification costing approximately 270k gas. Aggregating multiple withdrawal proofs into a single on-chain verification using proof recursion (a SNARK proving the validity of $M$ inner SNARKs) could reduce the amortised per-withdrawal verification cost to near-constant. The SP1 framework already supports recursive proof composition, making this a natural extension of the existing infrastructure.
 
-\textbf{Cross-chain and multi-asset support.} Extending DePLOB to accept deposits from other EVM-compatible chains via bridge integrations (e.g., LayerZero or Wormhole message-passing) would substantially expand the addressable liquidity. Similarly, generalising the matching engine to maintain independent order books for multiple token pairs — with shared commitment entries distinguishing assets by the token field already present in the commitment hash — would enable a more complete dark-pool trading experience without requiring users to maintain separate deposits per asset pair.
+\textbf{Cross-chain and multi-asset support.} Extending DePLOB to accept deposits from other EVM-compatible chains via bridge integrations (e.g., LayerZero or Wormhole message-passing) would substantially expand the addressable liquidity. Similarly, generalising the matching engine to maintain independent order books for multiple token pairs with shared commitment entries distinguishing assets by the token field already present in the commitment hash would enable a more complete dark-pool trading experience without requiring users to maintain separate deposits per asset pair.
 
 \nocite{*}
 \printbibliography
@@ -813,7 +813,277 @@ Token B (test ERC-20) & \texttt{0xb35B77Cf1fCaD28eD3d968743E0D9fD5Dafc2673} \\
 \label{tab:contracts}
 \end{table}
 
+\section{User Guide}
+\label{app:userguide}
 
+This appendix describes how to install and use the DePLOB command-line interface (CLI) to interact with the shielded pool on any EVM-compatible network.
+
+\subsection{Installation}
+
+The CLI is built from the repository root using the Rust toolchain:
+
+\begin{verbatim}
+# Install the deplob binary to ~/.cargo/bin
+cargo install --path cli
+
+# Verify installation
+deplob --help
+\end{verbatim}
+
+\noindent The binary name is \texttt{deplob}. Re-run \texttt{cargo install --path cli} to update after any code changes. To uninstall: \texttt{cargo uninstall deplob}.
+
+\subsection{Environment Setup}
+
+All flags that accept an address, URL, or key can alternatively be provided via environment variables, which avoids repeating them on every command. The recommended approach is to export them in a \texttt{.env} file and source it before use.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|p{5.5cm}|}
+\hline
+\textbf{Variable} & \textbf{Corresponding Flag} & \textbf{Description} \\
+\hline
+\texttt{ETH\_RPC\_URL} & \texttt{--rpc-url} & Ethereum JSON-RPC endpoint (Sepolia or local Anvil) \\
+\hline
+\texttt{DEPLOB\_ADDRESS} & \texttt{--contract} & Deployed DePLOB contract address \\
+\hline
+\texttt{PRIVATE\_KEY} & \texttt{--private-key} & Hex private key for signing on-chain transactions \\
+\hline
+\texttt{TEE\_URL} & \texttt{--tee-url} & Base URL of the TEE matching engine (e.g.\ \texttt{http://host:3000}) \\
+\hline
+\texttt{SP1\_PROVER} & — & SP1 proof backend: \texttt{network} (remote, \textasciitilde{}1 min) or \texttt{local} \\
+\hline
+\texttt{NETWORK\_PRIVATE\_KEY} & — & SP1 network authentication key (required when \texttt{SP1\_PROVER=network}) \\
+\hline
+\end{tabular}
+\caption{DePLOB CLI environment variables and their corresponding flags.}
+\label{tab:env_vars}
+\end{table}
+
+\noindent For Sepolia the public contract is at \texttt{0x44FaCD3E32588bCa027Bad19d7255FbbC3a81257} and the TEE engine is at \texttt{http://20.86.148.102:3000}.
+
+\subsection{Subcommands}
+
+Every subcommand shares three \textit{chain arguments} that identify the network and the signing key.  These can be supplied as flags or read from environment variables (Table~\ref{tab:env_vars}).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|l|p{5cm}|}
+\hline
+\textbf{Flag} & \textbf{Env var} & \textbf{Required} & \textbf{Description} \\
+\hline
+\texttt{--rpc-url} & \texttt{ETH\_RPC\_URL} & Yes & JSON-RPC endpoint \\
+\hline
+\texttt{--contract} & \texttt{DEPLOB\_ADDRESS} & Yes & DePLOB contract address \\
+\hline
+\texttt{--private-key} & \texttt{PRIVATE\_KEY} & Yes & Signing key (hex, with or without \texttt{0x}) \\
+\hline
+\end{tabular}
+\caption{Shared chain arguments accepted by all subcommands.}
+\label{tab:chain_args}
+\end{table}
+
+\subsubsection{deposit}
+
+Locks ERC-20 tokens in the shielded pool and saves a deposit note locally.  The deposit note is the only proof of ownership — keep it safe.
+
+\begin{verbatim}
+deplob deposit \
+  --token   <TOKEN_ADDRESS> \
+  --amount  <AMOUNT_IN_WEI> \
+  [--note-file deposit_note.json]
+\end{verbatim}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|l|p{5.5cm}|}
+\hline
+\textbf{Flag} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\hline
+\texttt{--token} & address & Yes & ERC-20 token contract address \\
+\hline
+\texttt{--amount} & integer & Yes & Amount to deposit in the token's smallest unit (wei) \\
+\hline
+\texttt{--note-file} & path & No & Output path for the deposit note (default: \texttt{deposit\_note.json}) \\
+\hline
+\end{tabular}
+\caption{\texttt{deposit} subcommand flags.}
+\end{table}
+
+\noindent The command writes a JSON file containing the commitment, nullifier note, secret, and nullifier.  This file is required by all subsequent subcommands.
+
+\subsubsection{withdraw}
+
+Proves Merkle inclusion of a deposit and transfers the tokens to a recipient address.  The recipient may be any fresh address — no on-chain link to the depositing address is created.
+
+\begin{verbatim}
+deplob withdraw \
+  --note       deposit_note.json \
+  --recipient  <RECIPIENT_ADDRESS> \
+  [--proof     generate | <PATH_TO_PROOF_FILE>] \
+  [--proof-type groth16 | plonk]
+\end{verbatim}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|l|p{5cm}|}
+\hline
+\textbf{Flag} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\hline
+\texttt{--note} & path & Yes & Path to the deposit note JSON file \\
+\hline
+\texttt{--recipient} & address & Yes & Address to receive the withdrawn tokens \\
+\hline
+\texttt{--proof} & string & No & \texttt{generate} to create a proof via the SP1 network (${\sim}$1 min, ${\sim}$\$0.30); a file path to load a pre-generated proof; or omit for the mock verifier \\
+\hline
+\texttt{--proof-type} & string & No & Proof system: \texttt{groth16} (default, \textasciitilde{}200 B, \textasciitilde{}270k gas) or \texttt{plonk} \\
+\hline
+\end{tabular}
+\caption{\texttt{withdraw} subcommand flags.}
+\end{table}
+
+\subsubsection{order}
+
+Submits a limit order to the TEE matching engine.  No on-chain transaction is required; the TEE verifies deposit ownership internally.
+
+\begin{verbatim}
+deplob order \
+  --note       deposit_note.json \
+  --side       buy | sell \
+  --price      <PRICE> \
+  --quantity   <QUANTITY> \
+  --token-in   <TOKEN_ADDRESS> \
+  --token-out  <TOKEN_ADDRESS> \
+  --tee-url    <TEE_URL>
+\end{verbatim}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|l|p{4.5cm}|}
+\hline
+\textbf{Flag} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\hline
+\texttt{--note} & path & Yes & Deposit note proving ownership of funds \\
+\hline
+\texttt{--side} & string & Yes & \texttt{buy} or \texttt{sell} \\
+\hline
+\texttt{--price} & decimal & Yes & Limit price \\
+\hline
+\texttt{--quantity} & decimal & Yes & Order quantity \\
+\hline
+\texttt{--token-in} & address & Yes & Token being offered \\
+\hline
+\texttt{--token-out} & address & Yes & Token being requested \\
+\hline
+\texttt{--tee-url} & URL & Yes & TEE matching engine base URL (env: \texttt{TEE\_URL}) \\
+\hline
+\end{tabular}
+\caption{\texttt{order} subcommand flags.}
+\end{table}
+
+\noindent On success the CLI writes \texttt{order\_\{id\}.json} containing the order ID, which is needed for cancellation.
+
+\subsubsection{cancel}
+
+Cancels an open order.  The deposit note is required to prove ownership (the TEE verifies the nullifier note preimage).
+
+\begin{verbatim}
+deplob cancel \
+  --order-id  <ORDER_ID_HEX> \
+  --note      deposit_note.json \
+  --tee-url   <TEE_URL>
+\end{verbatim}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|l|p{5cm}|}
+\hline
+\textbf{Flag} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\hline
+\texttt{--order-id} & hex & Yes & Order ID from \texttt{order\_\{id\}.json} (with or without \texttt{0x}) \\
+\hline
+\texttt{--note} & path & Yes & Original deposit note (proves ownership) \\
+\hline
+\texttt{--tee-url} & URL & Yes & TEE matching engine base URL (env: \texttt{TEE\_URL}) \\
+\hline
+\end{tabular}
+\caption{\texttt{cancel} subcommand flags.}
+\end{table}
+
+\subsubsection{settlement}
+
+After the TEE settles a matched trade on-chain, the user's original deposit commitment is spent and replaced with a new one.  This command retrieves the new deposit note from the TEE, which is then used for a subsequent withdrawal.
+
+\begin{verbatim}
+deplob settlement \
+  --note     deposit_note.json \
+  --tee-url  <TEE_URL> \
+  [--save    new_deposit_note.json]
+\end{verbatim}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|l|l|p{5cm}|}
+\hline
+\textbf{Flag} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\hline
+\texttt{--note} & path & Yes & Original deposit note \\
+\hline
+\texttt{--tee-url} & URL & Yes & TEE matching engine base URL (env: \texttt{TEE\_URL}) \\
+\hline
+\texttt{--save} & path & No & Output path for the new deposit note (default: \texttt{new\_deposit\_note.json}) \\
+\hline
+\end{tabular}
+\caption{\texttt{settlement} subcommand flags.}
+\end{table}
+
+\subsection{End-to-End Workflow}
+
+The following steps illustrate a complete private trade on the Sepolia deployment.  Set the environment variables from Table~\ref{tab:env_vars} before starting.
+
+\begin{enumerate}
+    \item \textbf{Approve tokens.} Before depositing, approve the DePLOB contract to spend your ERC-20 tokens (e.g.\ via \texttt{cast send}).
+
+    \item \textbf{Deposit.} Lock tokens in the shielded pool and save the deposit note:
+    \begin{verbatim}
+deplob deposit --token 0xaaC99...680B --amount 1000000000000000000
+    \end{verbatim}
+    This writes \texttt{deposit\_note.json}.  \textbf{Back it up} — losing it makes funds unrecoverable.
+
+    \item \textbf{Place a limit order.} Submit a buy or sell order to the TEE; no gas is spent:
+    \begin{verbatim}
+deplob order --note deposit_note.json --side buy \
+  --price 1 --quantity 100 \
+  --token-in  0xaaC99...680B \
+  --token-out 0xb35B7...673
+    \end{verbatim}
+    This writes \texttt{order\_\{id\}.json}.
+
+    \item \textbf{(Optional) Cancel the order.} If the order has not yet matched:
+    \begin{verbatim}
+deplob cancel --order-id 0xabc123 --note deposit_note.json
+    \end{verbatim}
+
+    \item \textbf{Wait for a match.} When a counterparty's order crosses, the TEE automatically calls \texttt{settleMatch()} on-chain.  No user action is required.
+
+    \item \textbf{Retrieve the new deposit note.} After settlement, fetch the new commitment representing your trade proceeds:
+    \begin{verbatim}
+deplob settlement --note deposit_note.json --save new_note.json
+    \end{verbatim}
+
+    \item \textbf{Withdraw to a fresh address.} Generate a Groth16 proof and transfer the proceeds to any address, with no on-chain link to the original deposit:
+    \begin{verbatim}
+deplob withdraw --note new_note.json \
+  --recipient 0xFreshWallet... \
+  --proof generate
+    \end{verbatim}
+\end{enumerate}
 
 \end{document}
 
