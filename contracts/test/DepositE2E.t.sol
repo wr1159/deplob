@@ -80,15 +80,11 @@ contract DepositE2ETest is Test {
     /// @notice Test with FFI calling Rust script
     /// @dev Generates real commitment via SP1 execution, uses mock verifier
     function test_DepositWithFFI() public {
-        // Call Rust binary to generate test data
-        string[] memory inputs = new string[](7);
-        inputs[0] = "cargo";
-        inputs[1] = "run";
-        inputs[2] = "--release";
-        inputs[3] = "--bin";
-        inputs[4] = "generate_test_data";
-        inputs[5] = "--manifest-path";
-        inputs[6] = "../sp1-programs/deposit/script/Cargo.toml";
+        // Call Rust binary to generate test data, suppressing cargo's stderr noise
+        string[] memory inputs = new string[](3);
+        inputs[0] = "sh";
+        inputs[1] = "-c";
+        inputs[2] = "cargo run --release --bin generate_test_data --manifest-path ../sp1-programs/deposit/script/Cargo.toml 2>/dev/null";
 
         console.log("Calling FFI to generate test data...");
         bytes memory result = vm.ffi(inputs);
