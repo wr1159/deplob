@@ -39,11 +39,56 @@ DePLOB: Decentralised Private Limit Order Book}
         National University of Singapore\\[1em]
         2025/2026\\[4em]
     \end{center}
+    \begin{flushleft}
     Project No: H392120\\
-    Advisor: Prof. Zhang Jiaheng
+    Advisor: Prof. Zhang Jiaheng\\
+    \\
+    Deliverables: \\
+    \hspace{10mm} Report: 1 Volume \\  
+    \hspace{10mm} Software: DePLOB Library (1 Repository) \\
+    \end{flushleft}
 }
 
 \begin{document}
+
+\begin{titlepage}
+  \thispagestyle{empty}
+  \begin{center}
+    \vspace*{10mm}
+
+    {\large B.Comp.\ Dissertation}
+
+    \vspace{30mm}
+
+    {\Huge \textbf{DePLOB: Decentralised Private Limit Order Book}}
+
+    \vspace{30mm}
+
+    {\large By}
+
+    \vspace{8mm}
+
+    {\large Chu Wei Rong}
+
+    \vfill
+
+    {\large Department of Computer Science}
+
+    \vspace{4mm}
+
+    {\large School of Computing}
+
+    \vspace{4mm}
+
+    {\large National University of Singapore}
+
+    \vspace{8mm}
+
+    {\large 2025/2026}
+
+    \vspace{10mm}
+  \end{center}
+\end{titlepage}
 
 \begin{titlepage}
 \customtitle
@@ -52,7 +97,34 @@ DePLOB: Decentralised Private Limit Order Book}
 \pagenumbering{roman}
 \begin{abstract}
 Decentralised exchanges (DEXs) built on public blockchains expose every order, trade, and balance to open observation, enabling front-running, sandwich attacks, and liquidation hunting by adversarial bots. We introduce \textbf{DePLOB} (Decentralised Private Limit Order Book), a protocol that enables confidential limit-order trading on EVM blockchains without sacrificing verifiability or user custody of funds. DePLOB combines three components: a nullifier-commitment shielded pool (inspired by Tornado Cash) that hides depositor identities and balances; a Trusted Execution Environment (TEE) matching engine running inside an Intel SGX enclave on Azure DCsv3 hardware via the Gramine LibOS, which processes orders with price-time priority while keeping all order parameters confidential; and a zero-knowledge withdrawal circuit built on the SP1 zkVM that proves Merkle inclusion and nullifier derivation without revealing which deposit is spent.
+
+
+\bigskip
+\noindent Subject Descriptors:
+
+\begin{tabbing}
+\hspace{12mm}\=\hspace{12mm}\=\kill
+\> C.2.4 \> Distributed Systems \\
+\> D.4.6 \> Security and Protection \\
+\> E.3   \> Data Encryption \\
+\> K.4.4 \> Electronic Commerce
+\end{tabbing}
+
+\noindent Keywords:
+
+{\setlength{\leftskip}{12mm}\noindent
+decentralised exchange, limit order book, privacy-preserving protocols, zero-knowledge proofs, trusted execution environment, shielded pool, front-running, MEV, SP1 zkVM, Intel SGX
+\par}
+
+\medskip
+\noindent Implementation
+
+{\setlength{\leftskip}{12mm}\noindent
+Solidity/Foundry, Rust (SP1 zkVM, Axum, Gramine LibOS), Sepolia testnet; Intel SGX on Azure DCsv3.
+\par}
 \end{abstract}
+
+
 \newpage
 
 \tableofcontents
@@ -60,7 +132,7 @@ Decentralised exchanges (DEXs) built on public blockchains expose every order, t
 \pagenumbering{arabic}
 \section{Introduction}
 \subsection{Problem Motivation} 
-Blockchain technology and finance started its first days with the launch of Bitcoin, the frst peer-to-peer internet money network \parencite{bitcoin}. This adoption is mainly powered by Smart Contracts, first coined in Ethereum \parencite{ethereum}. This use of smart contracts for finance is coined Decentralised Finance (DeFi) due to blockchain's decentralised property where no one can be completely censored from using the network. In DeFi, the cornerstone of all decentralised applications (dApps) are Decentralised Exchanges (DEXs) where users can swap one cryptocurrencies for another \parencite{lin2019deconstructing}.
+Blockchain technology and finance started its first days with the launch of Bitcoin, the first peer-to-peer internet money network \parencite{bitcoin}. This adoption is mainly powered by Smart Contracts, first coined in Ethereum \parencite{ethereum}. This use of smart contracts for finance is coined Decentralised Finance (DeFi) due to blockchain's decentralised property where no one can be completely censored from using the network. In DeFi, the cornerstone of all decentralised applications (dApps) are Decentralised Exchanges (DEXs) where users can swap one cryptocurrencies for another \parencite{lin2019deconstructing}.
 
 Due to the same decentralised nature of blockchain, every transaction, whether it is a liquidity pool swap, order placement or cancellation will all result in a publicly visible state transition on the blockchain. This means the entire order book state, its updates, the wallets of users involved, and the amounts involved are visible to observers unless additional privacy measures are applied \parencite{schar2021decentralized}.
 
@@ -78,7 +150,32 @@ The main objectives of the research is to design and implement a Decentralised P
 
 This will be performed with a combination of Zero-Knowledge Proofs (ZKP), Trusted Execution Environment (TEE) and smart contracts which users can interact with on the blockchain.
 
-This report presents the full design and implementation of DePLOB, covering the cryptographic commitment scheme, ZK withdrawal circuit, TEE matching engine deployed on Intel SGX via Gramine, and smart contract layer — together with a security analysis and gas-cost evaluation against comparable systems.
+This report presents the full design and implementation of DePLOB, covering the cryptographic commitment scheme, ZK withdrawal circuit, TEE matching engine deployed on Intel SGX via Gramine, and smart contract layer, together with a security analysis and gas-cost evaluation against comparable systems.
+
+\subsection{Contributions}
+
+This work makes the following contributions:
+
+\begin{itemize}
+    \item \textbf{DePLOB protocol design.} A novel hybrid architecture combining a
+    nullifier-commitment shielded pool, TEE-based matching engine, and ZK withdrawal
+    circuit that achieves order-book privacy, fund safety under TEE compromise, and
+    deposit-withdrawal unlinkability simultaneously. No prior single system provides
+    all three properties together.
+
+    \item \textbf{Two-phase DCAP attestation pattern.} A gas-efficient on-chain TEE
+    registration scheme: a one-time \texttt{registerEnclave()} call verifies the SGX
+    DCAP quote and records the enclave signing key (${\sim}$58k gas), after which each
+    \texttt{settleMatch()} requires only a cheap ECDSA \texttt{ecrecover} (${\sim}$5k gas),
+    reducing per-trade settlement overhead by over $11\times$ compared to embedding a
+    full DCAP quote in every settlement.
+
+    \item \textbf{Full testnet deployment and evaluation.} A working end-to-end
+    implementation deployed on Ethereum Sepolia, including an SGX enclave on Azure
+    DCsv3, real Groth16 proof generation via the SP1 proof network, and on-chain DCAP
+    attestation registration, with gas cost measurements and a security analysis
+    including formal cryptographic reductions.
+\end{itemize}
 
 \section{Preliminary Knowledge}
 \subsection{Blockchain}
@@ -261,7 +358,7 @@ Consequently, while TEEs can provide strong practical security assurances, their
 
 \subsubsection{Intel SGX and DCAP Remote Attestation}
 
-Intel Software Guard Extensions (SGX) is one of the most widely deployed TEE implementations. SGX allows an application to define a protected region of memory called an \textbf{enclave}, whose contents are encrypted by the CPU and inaccessible to the host operating system, hypervisor, or other processes. When an enclave is loaded, the CPU computes a cryptographic measurement of the enclave's code and initial data, yielding a 256-bit digest denoted \textbf{MRENCLAVE}. Any modification to the enclave binary — even a single flipped bit — produces a different MRENCLAVE value, making it impossible to silently tamper with enclave code without detection.
+Intel Software Guard Extensions (SGX) is one of the most widely deployed TEE implementations. SGX allows an application to define a protected region of memory called an \textbf{enclave}, whose contents are encrypted by the CPU and inaccessible to the host operating system, hypervisor, or other processes. When an enclave is loaded, the CPU computes a cryptographic measurement of the enclave's code and initial data, yielding a 256-bit digest denoted \textbf{MRENCLAVE}. Any modification to the enclave binary, even a single flipped bit, will produce a different MRENCLAVE value, making it impossible to silently tamper with enclave code without detection \parencite{costan2016intel}.
 
 Remote attestation is the mechanism by which an enclave proves its identity and code integrity to an external verifier. In Intel SGX, an attestation \textbf{quote} is a signed structure of the form:
 $$
@@ -305,43 +402,43 @@ Given the recurring limitations identified in existing dark-pool DEX protocols, 
 
 \subsection{Privacy Goals}
 
-The most fundamental privacy property DePLOB must provide is \textbf{balance confidentiality}: an on-chain observer should be unable to determine how much of any token a given user holds within the shielded pool. Without this, a passive observer could infer liquidation thresholds or leverage levels from deposit sizes and correlate them with on-chain price movements — exactly the attack vector described by \textcite{daian2019flash}.
+The most fundamental privacy property DePLOB must provide is \textbf{balance confidentiality}: an on-chain observer should be unable to determine how much of any token a given user holds within the shielded pool. Without this, a passive observer could infer liquidation thresholds or leverage levels from deposit sizes and correlate them with on-chain price movements which is exactly the attack vector described by \textcite{daian2019flash}.
 
-Equally important is \textbf{order parameter confidentiality}. Even if a user's total deposited balance is hidden, revealing the side, price, and quantity of an order is sufficient for a front-running adversary to act ahead of the trade. DePLOB requires that none of these parameters ever appear in a publicly observable transaction; they must remain confined to the TEE's encrypted memory from submission to settlement.
+ \textbf{order parameter confidentiality} is the second goal. Even though a user's total deposited balance is hidden, revealing the side, price, and quantity of an order is sufficient for a front-running adversary to extract value. DePLOB requires that none of these parameters will appear in the transaction; they must remain confined to the TEE's encrypted memory from submission to settlement.
 
-A third goal is \textbf{deposit-withdrawal unlinkability}. In a conventional shielded pool it is possible to link a withdrawal address to a deposit address through timing analysis, chain-of-custody tracing, or FIFO heuristics \parencite{tang2021analysis}. DePLOB adopts the same nullifier-commitment scheme as \textit{Tornado Cash} to ensure that a withdrawal to a fresh address carries no on-chain evidence linking it to the original depositor.
+A third goal is \textbf{deposit-withdrawal unlinkability}. In a conventional shielded pool it is possible to link a withdrawal address to a deposit address through timing analysis, chain-of-custody tracing, or FIFO heuristics \parencite{tang2021analysis}. DePLOB adopts the same nullifier-commitment scheme as \textit{Tornado Cash} to ensure that a withdrawal to a fresh address carries no on-chain trace linking it to the original depositor.
 
-Finally, DePLOB must \textbf{hide trade activity}. Even after a match is settled, the on-chain record should not reveal which two parties traded, what price was agreed, or how much was exchanged. Settlement should be indistinguishable from two independent, unrelated commitments being updated — an observer should learn only that some commitments changed, not the economic meaning of those changes.
+The fourth goal is that DePLOB must \textbf{hide trade activity}. Even after a match is settled, the on-chain record should not reveal which two parties traded, how much of what price was traded. Settlement should be indistinguishable from two independent, unrelated commitments being updated. An observer should only learn that some commitments changed. 
 
 \subsection{Functional Requirements}
 
-From a user's perspective, DePLOB must support the following end-to-end workflow. A user begins by \textbf{depositing} ERC-20 tokens into the shielded pool: they compute a commitment from locally generated secrets and call the smart contract, which locks their tokens and inserts the commitment as a leaf in the on-chain Merkle tree. This is the only on-chain action required before trading.
+DePLOB must support the following user flow. A user starts by \textbf{depositing} ERC-20 tokens into the shielded pool: they compute a commitment from locally generated secrets and call the smart contract, which locks their tokens and inserts the commitment as a leaf in the on-chain Merkle tree. This is the only on-chain action required before trading.
 
-Once deposited, a user may \textbf{place limit orders} by transmitting their deposit secrets and order parameters directly to the TEE server over an encrypted channel. The TEE verifies the deposit's existence and coverage, then holds the order in its in-memory order book. Order placement and cancellation generate no on-chain transactions and incur zero gas cost to the user. The TEE must support both buy and sell side orders, partial fills, and cancellation at any time before a match.
+Once deposited, a user may \textbf{place limit orders} by sending their deposit secrets and order parameters directly to the TEE server over an encrypted channel (TLS). The TEE verifies the deposit's existence and coverage, then holds the order in its in-memory order book. Order placement and cancellation generate no on-chain transactions, therefore incurring zero gas cost to the user. The TEE must support both buy and sell side orders, partial fills, and cancellation at any time before a match.
 
-When a match is found, the TEE must autonomously \textbf{settle the trade on-chain} by calling \texttt{settleMatch()}, updating commitments for both counterparties without revealing any order parameters. Users do not need to take any action for settlement to occur.
+When a match is found, the TEE must \textbf{settle the trade on-chain} by calling \texttt{settleMatch()}, updating commitments for both counterparties without revealing any order parameters. Users do not need to take any action for settlement to occur.
 
-Finally, a user must be able to \textbf{withdraw} their balance — whether from an original deposit or from trade proceeds — to any Ethereum address of their choosing, at any time, without depending on the TEE being online. Withdrawal requires only a valid ZK proof of Merkle membership and nullifier derivation, verified entirely on-chain.
+Finally, a user must be able to \textbf{withdraw} their balance, whether from an original deposit or from trade proceeds, to any Ethereum address of their choosing, at any time. Withdrawal requires only a valid ZK proof of Merkle membership and valid nullifier, verified entirely on-chain.
 
 \subsection{Trust Assumptions}
 
 The DePLOB trust model is deliberately layered to minimise the consequences of any single component failing. At the base layer, the \textbf{smart contract} is the unconditional source of truth: the Merkle tree state, the nullifier set, and all token balances are determined solely by what has been recorded on-chain, and are enforceable by anyone without trusting any off-chain party.
 
-\textbf{ZK proofs} (generated via SP1 using Groth16 or Plonk) are trustless in the cryptographic sense: a valid proof is an unconditional guarantee that the prover knows a valid Merkle witness and nullifier preimage, verifiable by any party using the public verification key. No trust in the proving infrastructure is required for withdrawal correctness — only soundness of the underlying proof system and the correctness of the verifier contract.
+\textbf{ZK proofs} (generated via SP1 using Groth16 or Plonk) are trustless in the cryptographic sense: a valid proof is an unconditional guarantee that the prover knows a valid Merkle witness and nullifier preimage, verifiable by any party using the public verification key. No trust in the proving infrastructure is required for withdrawal correctness, only soundness of the underlying proof system and the correctness of the verifier contract.
 
-The \textbf{TEE} occupies a distinct trust tier: it is trusted for order confidentiality and matching integrity, but critically, it is \textit{not} trusted for fund custody. A complete TEE compromise — including extraction of the in-memory order book — degrades DePLOB's privacy guarantees but does not enable theft of user funds. The attacker cannot forge valid ZK proofs or create commitments that the on-chain contract would accept without valid Merkle witnesses. This separation of concerns is the key safety property of the hybrid design.
+The \textbf{SP1 proof network}, used when generating withdrawal proofs remotely, introduces a liveness dependency not captured by the cryptographic trust model. A degraded or unavailable network forces fallback to local proving (${\sim}$20--30 minutes). A malicious network could return an incorrect proof, causing the on-chain withdrawal to revert. It cannot, however, produce a \emph{valid} proof for a false statement without breaking Groth16 soundness under the $q$-SDH assumption; fund safety is therefore unaffected. 
+
+The \textbf{TEE} occupies a distinct trust tier: it is trusted for order confidentiality and matching integrity, but critically, it is \textit{not} trusted for fund custody. A complete TEE compromise (including extraction of the in-memory order book) degrades DePLOB's privacy guarantees but does not enable theft of user funds. The attacker cannot forge valid ZK proofs or create commitments that the on-chain contract would accept without valid Merkle witnesses. This separation of concerns is the key safety property of the hybrid design.
 
 Finally, \textbf{users} bear responsibility for the secrecy of their deposit note (the nullifier note and secret). Loss of these values means the corresponding commitment becomes permanently unspendable. This is an inherent consequence of the privacy model: since no counterparty knows the secrets, no recovery mechanism is possible without a trusted third party that would itself undermine privacy.
 
 \subsection{Constraints}
 
-Several engineering constraints shaped DePLOB's design. 
+\textbf{EVM compatibility} is a requirement due to its popularity. This means that the system must be deployable on Ethereum and other EVM networks, where the available hash functions are dictated by the EVM opcode set. This forces the use of \texttt{keccak256}, which is a native EVM opcode and costs a fixed 30 gas per 32-byte chunk. The alternative, Poseidon hash, is more ZK-friendly (far cheaper to prove in-circuit) but requires a Solidity precompile or a helper contract. The keccak256 choice trades higher in-circuit proving cost for simpler, cheaper on-chain verification.
 
-\textbf{EVM compatibility} is a hard requirement: the system must be deployable on Ethereum and other EVM networks, where the available hash functions are dictated by the EVM opcode set due to their popularity. This forces the use of \texttt{keccak256}, which is a native EVM opcode and costs a fixed 30 gas per 32-byte chunk. The alternative, Poseidon hash, is more ZK-friendly (far cheaper to prove in-circuit) but requires a Solidity precompile or a bespoke contract that adds complexity and audit surface. The keccak256 choice trades higher in-circuit proving cost for simpler, cheaper on-chain verification.
+\textbf{ZK proof generation latency} is a practical constraint on the withdrawal user experience. Local proof generation on a 14-inch M1 Pro MacBook Pro takes 20--30 minutes. DePLOB instead uses the \textbf{SP1 proof network}, which reduces generation time to approximately one minute and is accessible from any hardware, at a cost of approximately \$0.30 per proof. This latency is acceptable for withdrawals, which are infrequent and high-value, but would be unacceptable for interactive order placement, reinforcing the architectural decision to handle order flow entirely within the TEE.
 
-\textbf{ZK proof generation latency} is a practical constraint on the withdrawal user experience. Local proof generation on a 14-inch M1 Pro MacBook Pro takes 20--30 minutes — impractical for most users. DePLOB instead uses the \textbf{SP1 proof network}, which reduces generation time to approximately one minute and is accessible from any hardware, at a cost of approximately \$0.30 per proof. This latency is acceptable for withdrawals, which are infrequent and high-value, but would be unacceptable for interactive order placement, reinforcing the architectural decision to handle order flow entirely within the TEE.
-
-\textbf{Merkle root staleness} constrains the time window between proof generation and submission. The contract stores only the last 30 roots in a ring buffer; if more than 30 new deposits occur between when a user begins proof generation and when they submit the withdrawal transaction, their proof will reference an expired root and must be regenerated. The 30-root window represents a trade-off between on-chain storage cost and the probability of root expiry under normal deposit rates.
+\textbf{Merkle root staleness} constrains the time window between proof generation and submission. The contract stores only the last 30 roots in a ring buffer; if more than 30 new deposits occur between when a user begins proof generation and when they submit the withdrawal transaction, their proof will reference an expired root and should be regenerated. The 30-root window represents a trade-off between on-chain storage cost and the probability of root expiry under normal deposit rates.
 
 \textbf{On-chain proof verification cost} introduces a trade-off between proof size and gas. Groth16 produces a ${\sim}$200-byte proof with a fixed verification cost of ${\sim}$270k gas. Plonk produces a larger ${\sim}$868-byte proof at slightly higher gas cost but requires no per-circuit trusted setup. DePLOB uses Groth16 to minimise gas, accepting the operational overhead of a one-time trusted setup ceremony (handled by the SP1 team for the standard Groth16 parameters).
 
@@ -379,7 +476,7 @@ Users interact with DePLOB through a Rust-based \textbf{command-line interface (
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{flow-deposit-withdraw.png}
-    \caption{Deposit and withdrawal flow. Depositor and Withdrawer are represented as 2 different parties to prevent linkage of deposits and withdrawal.}
+    \caption{Deposit and withdrawal flow. Note that depositor and withdrawer are represented as 2 different parties to prevent linkage.}
     \label{fig:flow_deposit_withdraw}
 \end{figure}
 
@@ -387,14 +484,14 @@ The user samples two secret 32-byte values, $n, s \xleftarrow{\$} \{0,1\}^{256}$
 $$
 C = \text{keccak256}\!\left(n \;\|\; s \;\|\; \text{pad}_{32}(\text{token}) \;\|\; \text{pad}_{32}(\text{amount})\right),
 $$
-where $\text{pad}_{32}(\text{token})$ left-pads the 20-byte token address to 32 bytes and $\text{pad}_{32}(\text{amount})$ encodes the amount as a 16-byte big-endian integer left-padded to 32 bytes. The user then calls \texttt{deposit(token, amount, C)} via the CLI; the contract locks the tokens and inserts $C$ as a new leaf in the depth-20 incremental Merkle tree, appending the updated root $R_i$ to a 30-entry ring buffer. The commitment $C$ is a one-way hash — an observer learns only that a leaf was inserted, with no information about the depositor, token, or amount.
+where $\text{pad}_{32}(\text{token})$ left-pads the 20-byte token address to 32 bytes and $\text{pad}_{32}(\text{amount})$ encodes the amount as a 16-byte big-endian integer left-padded to 32 bytes. The user then calls \texttt{deposit(token, amount, C)} via the CLI; the contract locks the tokens and inserts $C$ as a new leaf in the depth-20 incremental Merkle tree, appending the updated root $R_i$ to a 30-entry ring buffer. The commitment $C$ is a one-way hash as an observer learns only that a leaf was inserted, with no information about the depositor, token, or amount.
 
 \subsubsection{Order Placement Flow}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{flow-deposit-order-cancel-withdraw.png}
-    \caption{Deposit, order placement, cancellation, and withdrawal flow. After depositing, the user submits order secrets and parameters to the TEE over HTTPS; the TEE holds the order in its in-memory book. The user may cancel at any time via \texttt{DELETE /v1/orders/:id}. No on-chain transaction is required for placement or cancellation. The user withdraws their original deposit using a ZK proof.}
+    \caption{Deposit, order placement, cancellation, and withdrawal flow. }
     \label{fig:flow_deposit_order_cancel}
 \end{figure}
 
@@ -417,7 +514,7 @@ If both pass, the order $o = (p, q, s_{\text{side}}, t)$ is inserted into the TE
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{flow-deposit-order-matched-withdraw.png}
-    \caption{Deposit, order matching, settlement, and withdrawal flow. Two users deposit independently and submit crossing limit orders to the TEE. The TEE matches the orders, computes new commitments for both parties' proceeds, and calls \texttt{settleMatch()} on-chain. Each user then independently withdraws their trade proceeds to a fresh address using a ZK proof — no link to the original depositors is visible on-chain.}
+    \caption{Deposit, order matching, settlement, and withdrawal flow.}
     \label{fig:flow_deposit_order_matched}
 \end{figure}
 
@@ -436,7 +533,7 @@ Once a match is identified, the TEE computes a \textit{settlement record} specif
 \subsubsection{Settlement Flow and TEE Attestation}
 \label{sec:settlement}
 
-After computing a settlement record, the TEE initiates on-chain settlement by calling \texttt{settleMatch()} on the DePLOB contract. This function is protected by an \texttt{onlyTEE} modifier that verifies an ECDSA attestation signature from the TEE's registered enclave-bound signing key. The settlement call carries the two spent nullifiers $(\nu_A, \nu_B)$, the new commitments $(C_A', C_B')$, and the signature. The contract checks the signature, marks both nullifiers as spent in the on-chain nullifier set (preventing double-settlement), and inserts the new commitments into the incremental Merkle tree. From an observer's perspective, the settlement is indistinguishable from two unrelated deposits being replaced by two others as no prices, quantities, or trader identities are revealed.
+After computing a settlement record, the TEE initiates on-chain settlement by calling \\ \texttt{settleMatch()} on the DePLOB contract. This function is protected by an \texttt{onlyTEE} modifier that verifies an ECDSA attestation signature from the TEE's registered enclave-bound signing key. The settlement call carries the two spent nullifiers $(\nu_A, \nu_B)$, the new commitments $(C_A', C_B')$, and the signature. The contract checks the signature, marks both nullifiers as spent in the on-chain nullifier set (preventing double-settlement), and inserts the new commitments into the incremental Merkle tree. From an observer's perspective, the settlement is indistinguishable from two unrelated deposits being replaced by two others as no prices, quantities, or trader identities are revealed.
 
 The authorization of the \texttt{settleMatch()} signing key rests on the DCAP attestation scheme described in \S2.4.1. DePLOB uses a \textbf{two-phase registration design}: before the matching engine can settle any trades, the TEE must call \texttt{registerEnclave(dcapQuote)}, which submits an SGX DCAP attestation quote to the smart contract. The contract verifies the quote's certificate chain and MRENCLAVE, and records the enclave's signing public key as the authorized TEE operator. This registration costs approximately 58{,}644 gas (a one-time cost) and establishes a cryptographic binding between the settlement signing key and the verified DePLOB enclave binary. Subsequent \texttt{settleMatch()} calls require only a cheap ECDSA \texttt{ecrecover} (approximately 5{,}000 additional gas), keeping per-trade settlement costs low.
 
@@ -475,7 +572,7 @@ The circuit produces a Groth16 proof $\pi$ of approximately 200 bytes. The user 
     \label{fig:tee_architecture}
 \end{figure}
 
-DePLOB's matching engine was deployed on an \textbf{Azure DCsv3-series} virtual machine — Azure's Confidential Computing offering powered by 3rd-generation Intel Xeon Scalable (Ice Lake) processors. DCsv3 are the standard cloud platform for SGX production workloads. The instance ran Ubuntu 22.04 LTS with the Intel SGX DCAP software stack (\texttt{libsgx-dcap-ql} and \texttt{libsgx-dcap-default-qpl}) installed, providing the platform quoting libraries needed to generate DCAP attestation quotes.
+DePLOB's matching engine was deployed on an \textbf{Azure DCsv3-series} virtual machine, Azure's Confidential Computing offering powered by 3rd-generation Intel Xeon Scalable (Ice Lake) processors. DCsv3 are the standard cloud platform for SGX production workloads. The instance ran Ubuntu 22.04 LTS with the Intel SGX DCAP software stack (\texttt{libsgx-dcap-ql} and \texttt{libsgx-dcap-default-qpl}) installed, providing the platform quoting libraries needed to generate DCAP attestation quotes.
 
 \begin{figure}[H]
     \centering
@@ -529,7 +626,7 @@ On its first start, the running enclave generates a fresh secp256k1 keypair, der
 
 \textbf{Merkle tree consistency across three implementations.} The incremental Merkle tree is implemented independently in Solidity (for on-chain insertion), in the \texttt{deplob-core} Rust library (for TEE verification and proof generation), and inside the SP1 zkVM program (for ZK circuit verification). All three must agree on the tree depth (20), the zero-value at level 0 (\texttt{[0u8; 32]}), the zero-value derivation at each level ($z_i = \text{keccak256}(z_{i-1} \| z_{i-1})$), and the left/right sibling ordering. Any discrepancy in these parameters causes the computed Merkle root to differ from the on-chain root, which causes the SP1 proof verifier to reject valid withdrawals. Resolving these mismatches required a dedicated cross-language test suite in which the Rust FFI generates Merkle proofs consumed directly by Foundry's \texttt{vm.ffi()} interface.
 
-\textbf{Root staleness under concurrent deposits.} The withdrawal proof circuit commits to a specific Merkle root $R_i$. Between the moment a user begins proof generation (which takes approximately one minute via the SP1 proof network) and the moment they submit the withdrawal transaction, other users may deposit into the contract, advancing the Merkle root. If more than 30 new roots are produced in this window, $R_i$ will rotate out of the ring buffer and the proof becomes invalid. The 30-root window was chosen as a practical balance: under normal deposit rates it provides at least tens of minutes of valid window, but a sudden burst of deposits could still force proof regeneration. This is a known limitation of the design and is discussed further in the Limitations section.
+\textbf{Root staleness under concurrent deposits.} The withdrawal proof circuit commits to a specific Merkle root $R_i$. Between the moment a user begins proof generation (which takes approximately one minute via the SP1 proof network) and the moment they submit the withdrawal transaction, other users may deposit into the contract, advancing the Merkle root. If more than 30 new roots are produced in this window, $R_i$ will rotate out of the ring buffer and the proof becomes invalid. The 30-root ring buffer (§4.4) means that a burst of deposits during the one-minute proof generation window can invalidate a proof before it is submitted, forcing regeneration, a usability concern discussed in §7.1.
 
 \textbf{SP1 zkVM environment constraints.} The SP1 guest program executes in a RISC-V virtual machine with no standard library support and tight constraints on available syscalls. This meant that the keccak256 implementation and the incremental Merkle tree logic had to be rewritten as pure, no-std Rust, avoiding any heap allocation or OS dependencies. The existing \texttt{deplob-core} library was structured to compile in both std and no-std modes, sharing the same cryptographic primitives between the native TEE server and the zkVM guest program and ensuring that the commitment scheme used inside the ZK circuit is identical to the one used at deposit time.
 
@@ -537,11 +634,11 @@ On its first start, the running enclave generates a fresh secp256k1 keypair, der
 
 \textbf{TEE for matching, ZK for withdrawal.} The most fundamental architectural decision is the allocation of roles between the TEE and the ZK proof system. Order matching requires mutable shared state (the order book) and must respond to incoming orders with sub-second latency to be usable. ZK circuits are stateless and require a new proof for every state transition; generating a Groth16 proof takes approximately one minute, which is impractical for interactive order placement. The TEE, by contrast, can maintain the order book in-memory and match orders in microseconds. Conversely, withdrawal must be unconditionally trustless: users must be able to reclaim their funds even if the TEE is offline, hostile, or has been compromised. Fully TEE-based systems such as Secret Network make fund safety contingent on the enclave's integrity, meaning a successful hardware attack can lead to fund theft. A ZK proof of Merkle inclusion avoids this as any party can verify it on-chain without any cooperation from the TEE, ensuring fund safety is independent of the TEE's trustworthiness.
 
-\textbf{Shielded pool over an account model.} An account-based privacy model (as used in systems with private balances per address) would require that the protocol maintain a mapping from addresses to encrypted balances — a mapping that, even if encrypted, anchors each user's trading activity to a persistent pseudonymous identity. The shielded pool model, following Tornado Cash, avoids this: each deposit generates a fresh, random commitment with no link to any address, and the withdrawal recipient is chosen freely at withdrawal time. This naturally achieves deposit-withdrawal unlinkability without any address-specific state on-chain, at the cost of requiring users to manage their deposit notes locally.
+\textbf{Shielded pool over an account model.} An account-based privacy model (as used in systems with private balances per address) would require that the protocol maintain a mapping from addresses to encrypted balances. This mapping, even if encrypted, anchors each user's trading activity to a persistent pseudonymous identity. The shielded pool model, following Tornado Cash, avoids this as each deposit generates a fresh, random commitment with no link to any address, and the withdrawal recipient is chosen freely at withdrawal time. This naturally achieves deposit-withdrawal unlinkability without any address-specific state on-chain, at the cost of requiring users to manage their deposit notes locally.
 
 \textbf{SP1 over Circom or Halo2.} ZK circuit frameworks such as Circom require circuits to be written in a domain-specific language, and Halo2 requires low-level constraint system programming in Rust. SP1, by contrast, allows the ZK circuit to be written as ordinary Rust code that is compiled to a RISC-V ELF and executed inside the zkVM. This means the same Rust types and functions used like keccak256 implementation, Merkle tree logic, commitment derivation can be reused inside the ZK circuit with minimal modification, dramatically reducing the risk of commitment-scheme divergence between the native and in-circuit implementations. The resulting Groth16 proof is ~200 bytes and costs approximately 270k gas to verify on-chain, which is competitive with hand-written Circom circuits.
 
-\textbf{Keccak256 over Poseidon.} The Poseidon hash function is specifically designed for efficiency inside ZK circuits: it operates over a prime field and requires far fewer constraints per evaluation than keccak256. However, Poseidon is not a native EVM opcode which means verifying a Poseidon hash on-chain requires either a precompile (only available on chains that have deployed one) or a bespoke Solidity implementation that adds significant audit surface and gas overhead. Keccak256, by contrast, is a first-class EVM opcode costing 30 gas per 32-byte block. DePLOB's on-chain commitment insertion, nullifier checking, and Merkle tree updates all use keccak256 directly. The trade-off is that the SP1 circuit must evaluate keccak256 in-circuit, which requires more constraints than Poseidon, but this higher in-circuit cost is offset by the simpler, cheaper, and more auditable on-chain verification path.
+\textbf{Keccak256 over Poseidon.} The Poseidon hash function is specifically designed for efficiency inside ZK circuits. However, Poseidon is not a native EVM opcode which means verifying a Poseidon hash on-chain requires either a precompile (only available on chains that have deployed one) or a helper Solidity implementation. Keccak256, by contrast, is a first-class EVM opcode costing 30 gas per 32-byte block. DePLOB's on-chain commitment insertion, nullifier checking, and Merkle tree updates all use keccak256 directly. The trade-off is that the SP1 circuit must evaluate keccak256 in-circuit, which requires more constraints than Poseidon, but this higher in-circuit cost is offset by the simpler, cheaper, and more auditable on-chain verification path.
 
 \subsection{Security Analysis}
 
@@ -556,13 +653,13 @@ DePLOB's security analysis considers four classes of adversary, summarised in Ta
 \hline
 \textbf{Adversary Class} & \textbf{Capabilities} & \textbf{Impact on DePLOB} \\
 \hline
-Passive on-chain observer & Reads all Ethereum state and event logs & Cannot learn trade parameters, depositor identity, or balances — all hidden by commitments and TEE \\
+Passive on-chain observer & Reads all Ethereum state and event logs & Cannot learn trade parameters, depositor identity, or balances as they are all hidden by commitments and TEE \\
 \hline
 Active malicious user & Crafts deposits, orders, ZK proofs & Cannot forge commitments (preimage hardness) or double-spend (nullifier set); ZK soundness prevents false withdrawal proofs \\
 \hline
 Compromised TEE operator & Full host-OS access to Azure VM; can read non-EPC memory, observe network traffic, restart enclave, attempt side-channel key extraction & Privacy loss only. Attacker sees order book state; cannot forge valid ZK proofs or steal funds \\
 \hline
-Hardware-level attacker & Physical access and microcode exploits (SGAxe-class); can extract enclave secrets & Privacy loss (order book state leaked); out of scope for fund-safety guarantees \\
+Hardware-level attacker & Physical access and microcode exploits (SGAxe-class); can extract enclave secrets & Privacy loss (order book state leaked)\\
 \hline
 \end{tabular}
 \caption{DePLOB threat model: adversary classes, capabilities, and impact.}
@@ -573,7 +670,7 @@ Hardware-level attacker & Physical access and microcode exploits (SGAxe-class); 
 
 \textbf{Double-spend prevention.} Every nullifier $\nu = \text{keccak256}(n)$ is checked against the on-chain nullifier set before any state change in both \texttt{withdraw()} and \texttt{settleMatch()}. The nullifier set is append-only; once a nullifier is recorded, all subsequent uses are reverted unconditionally. Second-preimage resistance of keccak256 under its 256-bit security guarantee means that an adversary cannot find a distinct nullifier note $n' \neq n$ satisfying $\text{keccak256}(n') = \nu$. The on-chain enforcement means that even a fully compromised TEE operator cannot double-settle a trade, because the second call carrying the same nullifiers will be reverted by the smart contract.
 
-\textbf{Deposit forgery and commitment binding.} Before accepting any order, the TEE recomputes the commitment from the user's submitted secrets and verifies its Merkle inclusion against the current on-chain root. Forging a commitment requires finding a keccak256 preimage — computationally infeasible. A maliciously crafted commitment whose preimage is unknown to any real user permanently locks the corresponding ERC-20 tokens inside the contract with no withdrawal path. Therefore a compromised TEE cannot ``mint'' spendable commitments; all spendable tokens correspond to tokens actually transferred in by real users.
+\textbf{Deposit forgery and commitment binding.} Before accepting any order, the TEE recomputes the commitment from the user's submitted secrets and verifies its Merkle inclusion against the current on-chain root. Forging a commitment requires finding a keccak256 preimage which is computationally infeasible. A maliciously crafted commitment whose preimage is unknown to any real user permanently locks the corresponding ERC-20 tokens inside the contract with no withdrawal path. Therefore a compromised TEE cannot ``mint'' spendable commitments; all spendable tokens correspond to tokens actually transferred in by real users.
 
 \textbf{TEE compromise: privacy loss vs fund safety.} A complete TEE compromise gives the attacker access to the in-memory order book and the ability to call \texttt{settleMatch()} with arbitrary nullifier-commitment pairs. What they cannot do is forge valid ZK proofs or steal deposited funds. A full TEE compromise therefore degrades DePLOB to a system with no order-book privacy but fully preserved fund safety.
 
@@ -581,7 +678,13 @@ Hardware-level attacker & Physical access and microcode exploits (SGAxe-class); 
 
 \textbf{ZK proof soundness.} The Groth16 proof system is computationally sound under the discrete logarithm assumption on the BN254 elliptic curve. The verifier key \texttt{WITHDRAW\_VKEY} is fixed at contract deployment; partial-witness attacks are prevented because the circuit enforces all three relations (commitment well-formedness, Merkle path validity, nullifier derivation) in the same proof.
 
-\textbf{Front-running and MEV resistance.} Order parameters are transmitted directly to the TEE over HTTPS and never posted to any public mempool or on-chain state before settlement. The settlement record reveals only that two nullifiers were spent and two new commitments inserted — no prices, quantities, or trader identities appear in the transaction data or event logs.
+\textbf{Front-running and MEV resistance.} Order parameters are transmitted directly to the TEE over HTTPS and never posted to any public mempool or on-chain state before settlement. The settlement record reveals only that two nullifiers were spent and two new commitments inserted; no prices, quantities, or trader identities appear in the transaction data or event logs.
+
+\textbf{Settlement transaction metadata leakage.} However, \texttt{settleMatch()} calls are structurally distinguishable from plain deposits and withdrawals: a settlement transaction always consumes exactly two nullifiers and inserts exactly two new commitments (or four for partial fills) in a single atomic transaction. An on-chain observer can therefore identify that some trade occurred and infer its approximate timing, even though the counterparty identities, trade price, and quantity remain hidden. This is a metadata leakage at the transaction-graph level rather than a content leakage. It does not enable front-running of the settled trade (which is already complete at settlement time) but could allow passive traffic analysis over time. Mitigations include batching multiple settlements into a single transaction to obscure the 1-trade-per-tx pattern, and inserting decoy commitment updates, both deferred to future work.
+
+\textbf{TEE operator ordering fairness.} A subtler threat is a functionally intact but economically motivated TEE operator who is aware of incoming orders before they are matched. Because the operator controls the server receiving HTTPS connections, they can observe the timing and volume of order submissions, though not the encrypted content if TLS termination occurs inside the enclave. More critically, a malicious operator who built a modified enclave binary could embed front-running logic that inserts operator-controlled orders ahead of user orders.
+
+DePLOB's primary defence is the MRENCLAVE binding established at \texttt{registerEnclave()}. Any modification to the enclave binary, including the insertion of front-running logic, produces a different MRENCLAVE digest and invalidates the on-chain registration; the modified enclave's settlement calls would be rejected by the \texttt{onlyTEE} modifier. As long as the published DePLOB binary is open-source and its MRENCLAVE is publicly verified, users can confirm that the enclave they are submitting orders to runs the genuine matching logic. The residual trust assumption is that the operator did not tamper with the enclave prior to registration, which is bounded by the auditability of the open-source binary and the determinism of the build pipeline. This is a standard TEE trust assumption equivalent to the model used by systems such as Secret Network and Oasis Protocol.
 
 \section{Evaluation}
 \subsection{Benchmark Timings}
@@ -613,16 +716,9 @@ Order cancellation (TEE) & 0 & Off-chain, no on-chain transaction \\
 \label{tab:deplob_gas}
 \end{table}
 
-\noindent A full private trade cycle (deposit $\rightarrow$ settle $\rightarrow$ withdraw) costs approximately \textbf{997,463 gas} (${\sim}$\$2 at 1 gwei, ETH \$2,000), plus an off-chain SP1 proof network fee of ${\sim}$\$0.30 per withdrawal.
+\noindent A full private trade cycle (deposit $\rightarrow$ settle $\rightarrow$ withdraw) costs approximately \textbf{965,303 gas} (${\sim}$\$1.93 at 1 gwei, ETH \$2,000), plus an off-chain SP1 proof network fee of ${\sim}$\$0.30 per withdrawal.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\linewidth]{screenshot-forge-tests.png}
-    \caption{Foundry test suite output (\texttt{forge test -v}) showing all 50 tests passing across the DePLOB unit tests, Merkle tree tests, and FFI-based E2E deposit and withdrawal tests.}
-    \label{fig:forge_tests}
-\end{figure}
-
-Table~\ref{tab:gas_comparison} compares the measured on-chain gas costs for DePLOB against Tornado Cash (the reference shielded pool) and Uniswap V3 (the reference DEX). Several observations stand out. DePLOB's deposit is 3.8$\times$ cheaper than Tornado Cash's because DePLOB uses \texttt{keccak256}, a native EVM opcode, while Tornado Cash uses the MiMC hash function implemented as iterative Solidity field multiplications, which incur approximately 1,088k gas. Both withdrawal costs are dominated by ZK proof verification and are broadly comparable (${\sim}$310k vs ${\sim}$301k). Most significantly, DePLOB's order placement and cancellation cost \textbf{zero gas}, since these operations are handled entirely off-chain within the TEE; on-chain CLOBs such as dYdX v3 charge 50--200k gas per order operation. The settlement cost of ${\sim}$363k is \textbf{paid by the TEE operator}, not the trading user, and covers both parties' Merkle insertions and nullifier writes — amortising to approximately 181k gas per counterparty. A complete private trade cycle (deposit $\rightarrow$ settle $\rightarrow$ withdraw) costs approximately \textbf{997k gas} in total, a reasonable privacy premium comparable to around 6.6 Uniswap V3 swaps.
+Table~\ref{tab:gas_comparison} compares the measured on-chain gas costs for DePLOB against Tornado Cash (the reference shielded pool) and Uniswap V3 (the reference DEX). Several observations stand out. DePLOB's deposit is 3.8$\times$ cheaper than Tornado Cash's because DePLOB uses \texttt{keccak256}, a native EVM opcode, while Tornado Cash uses the MiMC hash function implemented as iterative Solidity field multiplications, which incur approximately 1,088k gas. Both withdrawal costs are dominated by ZK proof verification and are broadly comparable (${\sim}$310k vs ${\sim}$301k). Most significantly, DePLOB's order placement and cancellation cost \textbf{zero gas}, since these operations are handled entirely off-chain within the TEE; on-chain CLOBS typically charge 50--200k gas per order operation. The settlement cost of ${\sim}$363k is \textbf{paid by the TEE operator}, not the trading user, and covers both parties' Merkle insertions and nullifier writes. This amortises to approximately 181k gas per counterparty. This complete cycle represents a reasonable privacy premium, comparable to approximately 6.4 Uniswap V3 swaps.
 
 \begin{table}[H]
 \centering
@@ -645,6 +741,40 @@ Order cancellation & \textbf{0} & N/A & ${\sim}150,000$\\
 \caption{Gas cost comparison across DePLOB, Tornado Cash, and Uniswap V3}
 \label{tab:gas_comparison}
 \end{table}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{screenshot-forge-tests.png}
+    \caption{Foundry test suite output (\texttt{forge test -v}) showing all 50 tests passing and their gas cost}
+    \label{fig:forge_tests}
+\end{figure}
+
+\subsection{TEE Performance}
+
+Table~\ref{tab:tee_perf} reports latency and throughput of the TEE matching engine running inside the SGX enclave on Azure DCsv3. Measurements were taken from a remote client (Singapore) using \texttt{curl} for single-request latency and \texttt{ab} (Apache Bench) for keep-alive throughput. The measured round-trip time to the server was approximately 162\,ms (one-way $\approx$81\,ms), so server-side processing overhead is estimated by subtracting this baseline.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|r|l|}
+\hline
+\textbf{Metric} & \textbf{Measured} & \textbf{Notes} \\
+\hline
+HTTP round-trip (health, p50) & 172 ms & Keep-alive, 32 concurrent; $\approx$81 ms one-way \\
+\hline
+HTTP round-trip (health, p99) & 360 ms & Same test; network-dominated \\
+\hline
+Server-side Merkle verification & $<$17 ms & Estimated: order minus health processing time \\
+\hline
+Throughput (order endpoint, 32 conc.) & 115 req/s & Keep-alive, remote client; \emph{network-limited} \\
+\hline
+\end{tabular}
+\caption{DePLOB TEE matching engine performance on Azure DCsv3, measured from a remote client.}
+\label{tab:tee_perf}
+\end{table}
+
+Each accepted order submission additionally performs three Ethereum RPC calls against the Sepolia testnet (\texttt{is\_commitment\_known}, \texttt{is\_nullifier\_spent}, \texttt{is\_known\_root}) to enforce on-chain state consistency; this RPC overhead dominates end-to-end latency in a live deployment and was not isolated in the above measurements.
+
+The matching engine uses a \texttt{BTreeMap}-backed order book with $O(\log n)$ insertion and $O(1)$ amortised matching per order against the best opposing price. For typical order book depths of $n < 10{,}000$ resting orders, this yields sub-millisecond in-enclave matching latency, confirming the design choice to handle interactive order flow in the TEE rather than via ZK proofs, which require approximately one minute per proof.
+
 
 \subsection{Improvement vs Current Systems}
 
@@ -667,7 +797,7 @@ Uniswap V3 & AMM & None (public) & Trustless contract & --- & --- & None & ${\si
 COMMON & CLOB & Shielded pool + MPC & Threshold MPC & \checkmark & --- & Full & 0 \\
 \hline
 \end{tabular}
-\caption{Qualitative feature comparison of DePLOB against related systems. ZK = ZK proof used; TEE = attestation mechanism; MEV = MEV resistance level; Order Gas = on-chain gas per order placement.}
+\caption{Qualitative feature comparison of DePLOB against related systems.}
 \label{tab:system_comparison}
 \end{table}
 
@@ -677,7 +807,7 @@ COMMON & CLOB & Shielded pool + MPC & Threshold MPC & \checkmark & --- & Full & 
 
 \textbf{Compared to automated market-makers (Uniswap).} DePLOB uses a CLOB with strict price-time priority, allowing traders to post limit orders that rest in the book and execute only when a counterparty meets their price. This supports more sophisticated trading strategies, tighter spreads through competitive order placement, and better price discovery compared to AMM while still preserving the privacy guarantees that AMMs inherently lack due to their fully on-chain state.
 
-\textbf{Compared to full-TEE approaches.} Systems that rely exclusively on a TEE for fund custody make fund safety contingent on the enclave's integrity — a successful hardware attack can enable fund theft. In DePLOB, a TEE compromise degrades to a privacy loss only: withdrawals are governed by a Groth16 proof verifiable on-chain by any party, independent of the TEE.
+\textbf{Compared to full-TEE approaches.} Systems that rely exclusively on a TEE for fund custody make fund safety contingent on the enclave's integrity. A successful hardware attack can enable fund theft. In DePLOB, a TEE compromise degrades to a privacy loss only: withdrawals are governed by a Groth16 proof verifiable on-chain by any party, independent of the TEE.
 
 \textbf{Compared to MPC-based dark pools (COMMON, Rialto).} MPC-based protocols require a committee of parties to jointly decrypt orders or perform threshold signing; their security guarantees hold only when a sufficient fraction of committee members are honest and online simultaneously. Coordination overhead, key management, and the need to recruit and incentivize committee members all add operational complexity. DePLOB replaces the MPC committee with a single TEE enclave whose code identity is hardware-verified via Intel SGX DCAP attestation. The \texttt{registerEnclave()} call allows anyone to inspect the on-chain record of the MRENCLAVE digest and confirm that the authorized settlement key belongs to the genuine, unmodified DePLOB matching engine binary. This creates a narrower and more auditable trust assumption that does not require recruiting or monitoring external participants.
 
@@ -741,32 +871,54 @@ Fund safety under TEE compromise & ZK-only withdrawal path & Reduces to ZK sound
 \label{tab:security_summary}
 \end{table}
 
+\subsection{Anonymity Analysis}
+
+The privacy guarantee of DePLOB's shielded pool is probabilistic and depends on the size of the \textbf{anonymity set}: the number of unspent commitments in the Merkle tree at withdrawal time. Formally, let $\mathcal{U}_t$ denote the set of commitments inserted but not yet nullified at block height $t$. A withdrawing user's commitment is indistinguishable from any other member of $\mathcal{U}_t$, so the effective anonymity set size is $|\mathcal{U}_t|$.
+
+\textbf{How the set grows and shrinks.} Each \texttt{deposit()} call inserts one new commitment into $\mathcal{U}_t$. Each \texttt{withdraw()} or \texttt{settleMatch()} removes one or two commitments via nullifier revelation and inserts zero to two new commitments (trade proceeds). In a steady state where deposits and withdrawals balance, $|\mathcal{U}_t|$ remains roughly constant. In a growth phase (more deposits than withdrawals), anonymity improves; in a drain phase it degrades.
+
+\textbf{Evaluation anonymity set.} During the Sepolia testnet evaluation, the pool reached a peak of \textbf{10 unspent commitments} ($|\mathcal{U}_t| = 10$). By comparison, Tornado Cash's 1~ETH denomination pool has exceeded 100{,}000 deposits. The evaluation therefore operated squarely in the small-pool regime, where the anonymity guarantees are weakest and the analysis below applies directly.
+
+\textbf{Small-pool risk.} In low-participation deployments with fewer than ten active users, timing heuristics analogous to the FIFO analysis of \textcite{tang2021analysis} can substantially reduce the effective anonymity. An observer who records deposit and withdrawal timestamps with fine granularity may statistically narrow the candidate set even without breaking cryptographic commitments. DePLOB inherits this limitation from all shielded-pool designs and is most vulnerable during early adoption.
+
+\textbf{Amount-based correlation.} Unlike Tornado Cash, which enforces fixed denominations (0.1, 1, 10, 100 ETH pools), DePLOB accepts arbitrary amounts. An observer cannot learn the amount from the commitment alone. It is hidden inside the keccak256 hash with 512 bits of uniform randomness. However, if a TEE compromise exposes the in-memory order book, the observed trade size could be correlated with pool activity, partially breaking unlinkability for those trades.
+
+\textbf{Recommendation.} Users should wait for the pool to reach a meaningful size (at minimum tens of participants) before withdrawing to maximise the effective anonymity set. Protocol operators should consider a privacy dashboard reporting $|\mathcal{U}_t|$ so users can make informed decisions about withdrawal timing.
+
 \section{Conclusion}
 \subsection{Limitations}
 
-\textbf{No anonymous withdrawal relayer.} Although DePLOB breaks the on-chain link between the depositing address and the withdrawal recipient, the withdrawal transaction itself must be submitted by an Ethereum account that pays gas. If a user submits the withdrawal from a fresh address, that address must have been funded from somewhere — and any funding transaction is itself publicly visible. A full privacy solution requires a relayer: a third party who submits the withdrawal transaction on the user's behalf in exchange for a small fee paid from the withdrawn amount, so that the gas-paying address is never controlled by the user. Without a relayer, a determined analyst may still correlate the withdrawal recipient with the address that funded its gas, partially undermining unlinkability.
+\textbf{No anonymous withdrawal relayer.} Although DePLOB breaks the on-chain link between the depositing address and the withdrawal recipient, the withdrawal transaction itself must be submitted by an Ethereum account that pays gas. If a user submits the withdrawal from a fresh address, that address must have been funded from somewhere and any funding transaction is itself publicly visible. A full privacy solution requires a relayer: a third party who submits the withdrawal transaction on the user's behalf in exchange for a small fee paid from the withdrawn amount, so that the gas-paying address is never controlled by the user. Without a relayer, a determined analyst may still correlate the withdrawal recipient with the address that funded its gas, partially undermining unlinkability.
 
 \textbf{Single TEE instance.} The current implementation runs a single TEE matching engine with no replication. If this instance goes offline due to hardware failure, network disruption, or a deliberate shutdown, order matching halts entirely. Users' funds remain safe because withdrawals require only a valid ZK proof and do not depend on the TEE, but live trading is unavailable until the TEE is restored. 
 
 \textbf{Scope limited to ERC-20 tokens on a single EVM chain.} The current smart contract accepts only ERC-20 token deposits on a single Ethereum-compatible chain. Native ETH deposits would require additional wrapping logic, and assets held on other chains (Bitcoin, Solana, or other EVM networks) cannot enter the shielded pool without a cross-chain bridge. The matching engine also operates on a single token pair per deployment, limiting capital efficiency when users wish to trade across multiple markets.
 
-\textbf{ZK proof generation latency.} Generating a Groth16 proof via the SP1 proof network takes approximately one minute. While this is acceptable for the withdrawal flow — which is an infrequent, high-value operation — it means ZK proofs cannot be used for any latency-sensitive step in the order lifecycle. This is a fundamental constraint of the current ZK-for-withdrawal, TEE-for-matching hybrid design, and motivated the architecture choice described in the Design Choices section.
+\textbf{ZK proof generation latency.} Generating a Groth16 proof via the SP1 proof network takes approximately one minute. This is acceptable for the withdrawal flow, which is an infrequent, high-value operation. However, it means ZK proofs cannot be used for any latency-sensitive step in the order lifecycle. This is a fundamental constraint of the current ZK-for-withdrawal, TEE-for-matching hybrid design, and motivated the architecture choice described in the Design Choices section.
 
 \textbf{DCAP attestation trust chain dependency.} DePLOB's security relies on the integrity of Intel's SGX hardware and the DCAP certificate infrastructure. The correctness of the attestation process depends on Intel's Provisioning Certificate Caching Service (PCCS) issuing accurate TCB collateral and on the CPU's firmware not being backdoored. Moreover, Intel SGX has been subject to several published hardware side-channel attacks: the SGAxe attack demonstrated that SGX attestation keys could be extracted from certain CPUs given physical access and microcode vulnerabilities; LVI (Load Value Injection) and speculative execution leaks have shown that enclave secrets may be leaked under adversarial conditions. While Intel issues microcode patches for known vulnerabilities, the attack surface of SGX is inherently tied to low-level hardware behaviour that is difficult to audit. In DePLOB's threat model, a successful SGX attack degrades to a privacy loss (the attacker learns the order book state) rather than a fund loss (the attacker cannot forge valid ZK withdrawal proofs), but the privacy guarantee is nonetheless contingent on the absence of such exploits.
 
-\textbf{Merkle root staleness window.} Withdrawal proof generation requires the user to obtain a Merkle path relative to a specific root $R_i$. If many new deposits occur during the time between proof generation and on-chain submission, $R_i$ may rotate out of the 30-root ring buffer before the proof is submitted, rendering it invalid. The user would need to regenerate the proof relative to a more recent root. While the 30-root window provides a generous buffer under normal conditions, it is a finite resource and represents a usability concern for users on slow hardware or networks.
+\textbf{Merkle root staleness window.} Withdrawal proofs commit to a specific Merkle root $R_i$; if more than 30 new deposits occur between proof generation and on-chain submission, $R_i$ rotates out of the ring buffer and the proof must be regenerated. The 30-root design rationale (on-chain storage cost vs.\ expiry probability) is discussed in §4.4; it remains a usability concern for users on slow hardware or networks.
 
 \subsection{Future Work}
 
 \textbf{Relayer network for anonymous withdrawals.} The most immediately impactful privacy improvement would be the introduction of a withdrawal relayer layer. Under this design, users submit a signed withdrawal authorization (containing the ZK proof, nullifier, and recipient address) to an off-chain relayer, who bundles it into a transaction and submits it on-chain, recovering a fee from the withdrawn amount. Because the relayer pays gas from their own account, the recipient address need never control any pre-existing Ethereum balance, completing the unlinkability chain from deposit to withdrawal. This could be implemented using ERC-4337 account abstraction (which allows gasless transactions via a bundler network) or via a Flashbots-compatible relay that accepts signed payloads.
 
-\textbf{Multi-TEE replication and BFT consensus.} Replacing the single TEE instance with a network of $N$ TEE nodes, each independently attested via DCAP, would substantially improve liveness and censorship resistance. A Byzantine Fault Tolerant (BFT) consensus protocol among TEE nodes — for example, a variant of HotStuff or PBFT — would ensure that matching continues as long as $\lfloor(N-1)/3\rfloor$ nodes are online and honest. Each node would independently register its enclave key on-chain, and the settlement contract would require a threshold of signatures from registered enclaves rather than a single signature. This removes the current single point of failure and makes it significantly harder for any operator to selectively censor orders.
+\textbf{Multi-TEE replication and BFT consensus.} Replacing the single TEE instance with a network of $N$ TEE nodes, each independently attested via DCAP, would substantially improve liveness and censorship resistance. A Byzantine Fault Tolerant (BFT) consensus protocol among TEE nodes, for example, a variant of HotStuff or PBFT, would ensure that matching continues as long as $\lfloor(N-1)/3\rfloor$ nodes are online and honest. Each node would independently register its enclave key on-chain, and the settlement contract would require a threshold of signatures from registered enclaves rather than a single signature. This removes the current single point of failure and makes it significantly harder for any operator to selectively censor orders.
 
 \textbf{Batch settlement.} The current protocol settles each matched trade in a separate \\ \texttt{settleMatch()} transaction, incurring approximately 368k gas per settlement. Since a significant portion of this cost is fixed overhead (contract dispatch, signature verification, storage writes), batching $M$ settlements into a single call would amortise the fixed cost over many trades, reducing the per-trade marginal gas significantly. This optimisation is particularly valuable during periods of high order flow and would make DePLOB more competitive in terms of throughput-adjusted cost.
 
 \textbf{Withdrawal proof aggregation.} Each withdrawal currently requires an individual Groth16 proof verification costing approximately 270k gas. Aggregating multiple withdrawal proofs into a single on-chain verification using proof recursion (a SNARK proving the validity of $M$ inner SNARKs) could reduce the amortised per-withdrawal verification cost to near-constant. The SP1 framework already supports recursive proof composition, making this a natural extension of the existing infrastructure.
 
 \textbf{Cross-chain and multi-asset support.} Extending DePLOB to accept deposits from other EVM-compatible chains via bridge integrations (e.g., LayerZero or Wormhole message-passing) would substantially expand the addressable liquidity. Similarly, generalising the matching engine to maintain independent order books for multiple token pairs with shared commitment entries distinguishing assets by the token field already present in the commitment hash would enable a more complete dark-pool trading experience without requiring users to maintain separate deposits per asset pair.
+
+\subsection{Conclusion}
+
+DePLOB demonstrates that a privacy-preserving central limit order book is practically achievable on EVM blockchains today. By combining a nullifier-commitment shielded pool, a TEE-based matching engine running inside an Intel SGX enclave, and a zero-knowledge withdrawal circuit, the protocol achieves three properties simultaneously: order parameters are never exposed on-chain; funds are recoverable without trusting the TEE; and deposit-withdrawal addresses are unlinkable. The full system, comprising smart contracts, SP1 zkVM circuit, Gramine-wrapped Rust server, CLI, and DCAP attestation, was deployed end-to-end on the Ethereum Sepolia testnet, with a complete private trade cycle costing approximately 965k gas (Table~\ref{tab:deplob_gas}).
+
+Evaluation shows that DePLOB's deposit cost is $3.8\times$ lower than Tornado Cash's owing to native keccak256 usage, order placement and cancellation cost zero gas (vs 50--200k gas on transparent on-chain CLOBs), and withdrawal cost is broadly comparable to Tornado Cash at ${\sim}$310k gas. The security analysis establishes formal reductions for commitment binding, double-spend impossibility, and ZK proof soundness, and shows that a complete TEE compromise degrades to privacy loss only; fund theft requires forging Groth16 proofs, which is infeasible under the $q$-SDH assumption.
+
+Key limitations remain: the anonymity set is small in low-participation deployments, the single TEE instance is a liveness bottleneck, and settlement transactions leak trade-activity metadata at the transaction-graph level. Future work addresses these through a withdrawal relayer network for full unlinkability, multi-TEE BFT consensus for liveness, batch settlement to obscure the 2-in-2-out pattern, and withdrawal proof aggregation to reduce per-user gas. DePLOB establishes the feasibility of the hybrid TEE and ZK design and provides a concrete foundation for these extensions.
 
 \nocite{*}
 \printbibliography
@@ -886,7 +1038,7 @@ Every subcommand shares three \textit{chain arguments} that identify the network
 
 \subsubsection{deposit}
 
-Locks ERC-20 tokens in the shielded pool and saves a deposit note locally.  The deposit note is the only proof of ownership — keep it safe.
+Locks ERC-20 tokens in the shielded pool and saves a deposit note locally.  The deposit note is the only proof of ownership. Keep it safe.
 
 \begin{verbatim}
 deplob deposit \
@@ -916,7 +1068,7 @@ deplob deposit \
 
 \subsubsection{withdraw}
 
-Proves Merkle inclusion of a deposit and transfers the tokens to a recipient address.  The recipient may be any fresh address — no on-chain link to the depositing address is created.
+Proves Merkle inclusion of a deposit and transfers the tokens to a recipient address.  The recipient may be any fresh address so no on-chain link to the depositing address is created.
 
 \begin{verbatim}
 deplob withdraw \
@@ -1054,7 +1206,7 @@ The following steps illustrate a complete private trade on the Sepolia deploymen
     \begin{verbatim}
 deplob deposit --token 0xaaC99...680B --amount 1000000000000000000
     \end{verbatim}
-    This writes \texttt{deposit\_note.json}.  \textbf{Back it up} — losing it makes funds unrecoverable.
+    This writes \texttt{deposit\_note.json}.  \textbf{Back it up} as losing it will make funds unrecoverable.
 
     \item \textbf{Place a limit order.} Submit a buy or sell order to the TEE; no gas is spent:
     \begin{verbatim}
