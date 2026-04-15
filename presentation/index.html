@@ -125,13 +125,12 @@
 
         /* ── Fullscreen mode ── */
         body.fs .nav { opacity:0; pointer-events:none; transform:translateX(-50%) translateY(20px); }
-        body.fs .prog { opacity:0; }
+        body.fs .prog { opacity:1; }
         /* Hover zone at very bottom of screen to reveal nav */
         body.fs::after { content:''; position:fixed; bottom:0; left:0; right:0; height:60px; z-index:999; }
         body.fs::after:hover ~ .nav { opacity:1; }
         /* JS toggles .fs-show class on mouse near bottom */
         body.fs.fs-show .nav { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
-        body.fs.fs-show .prog { opacity:1; }
         .sc-num { color:var(--muted); font-size:13px; font-family:var(--fm); min-width:48px; text-align:center; }
 
         .div { width:48px; height:3px; background:var(--grad); border-radius:2px; }
@@ -806,15 +805,26 @@
     <div class="sc" style="gap:16px;max-width:940px;">
         <span class="tag teal">Infrastructure</span>
         <h2 class="title">TEE <span class="gtc">Infrastructure</span></h2>
-        <div class="g2 au">
-            <div class="img-wrap"><img src="images/tee-architecture.png" alt="TEE Architecture"></div>
-            <div class="img-wrap"><img src="images/screenshot-tee-sgx-boot.png" alt="SGX Enclave Boot Log"></div>
-        </div>
+        <div class="img-wrap au"><img src="images/tee-architecture.png" alt="TEE Architecture"></div>
         <div class="g4 au" style="gap:10px;">
             <div class="card" style="text-align:center;padding:10px 12px;"><p style="font-size:13px;font-weight:600;">Azure DCsv3</p><p style="font-size:11px;color:var(--muted);">Intel SGX Ice Lake</p></div>
             <div class="card" style="text-align:center;padding:10px 12px;"><p style="font-size:13px;font-weight:600;">Gramine v1.9</p><p style="font-size:11px;color:var(--muted);">Unmodified Rust binary</p></div>
             <div class="card" style="text-align:center;padding:10px 12px;"><p style="font-size:13px;font-weight:600;">256 MB Enclave</p><p style="font-size:11px;color:var(--muted);">32 threads, DCAP</p></div>
             <div class="card" style="text-align:center;padding:10px 12px;"><p style="font-size:13px;font-weight:600;">Sealed Storage</p><p style="font-size:11px;color:var(--muted);">MRENCLAVE-bound key</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     · SGX Enclave Boot
+══════════════════════════════════════ -->
+<div class="slide">
+    <div class="sc" style="gap:18px;max-width:940px;">
+        <span class="tag teal">Demo</span>
+        <h2 class="title">SGX Enclave <span class="gtc">Boot</span></h2>
+        <div class="img-wrap au"><img src="images/screenshot-tee-sgx-boot.png" alt="SGX Enclave Boot Log"></div>
+        <div class="ibox au" style="width:100%;text-align:center;">
+            <p style="font-size:15px;">Gramine SGX runtime loads the unmodified <code style="font-family:var(--fm);color:var(--teal);">deplob-tee</code> Rust binary into an Intel SGX enclave on Azure DCsv3</p>
         </div>
     </div>
 </div>
