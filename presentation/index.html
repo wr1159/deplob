@@ -10,20 +10,21 @@
     <style>
         :root {
             --bg:       #FFFFFF;
-            --surface:  #F6F7FB;
-            --border:   rgba(0,0,0,0.09);
-            --primary:  #4F46E5;
-            --secondary:#7C3AED;
-            --teal:     #0D9488;
-            --purple:   #7C3AED;
-            --text:     #1E1E2E;
+            --surface:  #F7F8FA;
+            --border:   rgba(0,0,0,0.08);
+            --primary:  #1D4ED8;
+            --secondary:#1D4ED8;
+            --teal:     #0F766E;
+            --purple:   #6D28D9;
+            --text:     #111827;
             --muted:    #6B7280;
-            --green:    #059669;
-            --yellow:   #D97706;
-            --red:      #DC2626;
-            --grad:     linear-gradient(135deg,#4F46E5,#7C3AED);
-            --grad-cool:linear-gradient(135deg,#0D9488,#7C3AED);
-            --grad-hero:linear-gradient(135deg,#4F46E5 0%,#7C3AED 40%,#0D9488 100%);
+            --green:    #15803D;
+            --yellow:   #B45309;
+            --red:      #B91C1C;
+            --accent:   #1D4ED8;
+            --grad:     linear-gradient(135deg,#1D4ED8,#2563EB);
+            --grad-cool:linear-gradient(135deg,#1D4ED8,#2563EB);
+            --grad-hero:linear-gradient(135deg,#1E3A5F 0%,#1D4ED8 50%,#2563EB 100%);
             --fh: 'Space Grotesk', sans-serif;
             --fb: 'Inter', sans-serif;
             --fm: 'JetBrains Mono', monospace;
@@ -49,20 +50,19 @@
         h1,h2,h3 { font-family:var(--fh); }
         .hero {
             font-size:clamp(28px,5vw,64px); font-weight:700; line-height:1.1;
-            background:var(--grad-hero); -webkit-background-clip:text;
-            -webkit-text-fill-color:transparent; background-clip:text; text-align:center;
+            color:var(--primary); text-align:center;
         }
-        .title { font-size:clamp(24px,3.8vw,48px); font-weight:700; line-height:1.15; font-family:var(--fh); text-align:center; }
-        .gt  { background:var(--grad);      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .gtc { background:var(--grad-cool); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .title { font-size:clamp(24px,3.8vw,48px); font-weight:700; line-height:1.15; font-family:var(--fh); text-align:center; color:var(--text); }
+        .gt  { color:var(--primary); }
+        .gtc { color:var(--teal); }
         .sub { font-size:clamp(15px,1.8vw,22px); color:var(--muted); line-height:1.55; text-align:center; }
 
-        .tag { font-size:11px; font-weight:600; letter-spacing:2.5px; text-transform:uppercase; color:var(--primary); padding:4px 14px; border:1px solid rgba(79,70,229,0.3); border-radius:100px; }
-        .tag.teal   { color:var(--teal);   border-color:rgba(13,148,136,0.3); }
-        .tag.purple { color:var(--purple); border-color:rgba(124,58,237,0.3); }
-        .tag.green  { color:var(--green);  border-color:rgba(5,150,105,0.3); }
-        .tag.yellow { color:var(--yellow); border-color:rgba(217,119,6,0.3); }
-        .tag.red    { color:var(--red);    border-color:rgba(220,38,38,0.3); }
+        .tag { font-size:11px; font-weight:600; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); padding:4px 14px; border:1px solid var(--border); border-radius:100px; background:var(--surface); }
+        .tag.teal   { color:var(--teal); }
+        .tag.purple { color:var(--purple); }
+        .tag.green  { color:var(--green); }
+        .tag.yellow { color:var(--yellow); }
+        .tag.red    { color:var(--red); }
 
         .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 24px; }
         .card.lp  { border-left:3px solid var(--primary); }
@@ -96,29 +96,29 @@
         .ctable { width:100%; border-collapse:collapse; font-size:clamp(13px,1.5vw,18px); }
         .ctable th { font-family:var(--fh); font-weight:600; padding:10px 14px; text-align:left; border-bottom:2px solid var(--border); color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
         .ctable td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
-        .ctable tr.hl td { background:rgba(79,70,229,0.04); }
+        .ctable tr.hl td { background:rgba(29,78,216,0.03); }
         .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; }
-        .badge.g { background:rgba(5,150,105,0.1); color:var(--green); }
-        .badge.r { background:rgba(220,38,38,0.1); color:var(--red); }
-        .badge.y { background:rgba(217,119,6,0.1); color:var(--yellow); }
-        .badge.p { background:rgba(79,70,229,0.1); color:var(--primary); }
+        .badge.g { background:rgba(21,128,61,0.08); color:var(--green); }
+        .badge.r { background:rgba(185,28,28,0.08); color:var(--red); }
+        .badge.y { background:rgba(180,83,9,0.08); color:var(--yellow); }
+        .badge.p { background:rgba(29,78,216,0.08); color:var(--primary); }
 
         .chip { display:inline-block; padding:3px 9px; border-radius:6px; font-size:11px; font-family:var(--fm); }
-        .chip.on  { background:rgba(79,70,229,0.08); color:var(--primary); }
-        .chip.off { background:rgba(5,150,105,0.08); color:var(--teal); }
+        .chip.on  { background:rgba(29,78,216,0.06); color:var(--primary); }
+        .chip.off { background:rgba(15,118,110,0.06); color:var(--teal); }
 
         .layer { width:100%; border-radius:12px; padding:16px 20px; display:flex; align-items:center; gap:16px; }
         .layer-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
 
-        .hbox { background:linear-gradient(135deg,rgba(79,70,229,0.06),rgba(124,58,237,0.03)); border:1px solid rgba(79,70,229,0.15); border-radius:12px; padding:14px 22px; }
-        .ibox { background:linear-gradient(135deg,rgba(13,148,136,0.06),rgba(124,58,237,0.03)); border:1px solid rgba(13,148,136,0.15); border-radius:12px; padding:14px 22px; }
-        .wbox { background:linear-gradient(135deg,rgba(217,119,6,0.06),rgba(220,38,38,0.03)); border:1px solid rgba(217,119,6,0.15); border-radius:12px; padding:14px 22px; }
+        .hbox { background:rgba(29,78,216,0.04); border:1px solid rgba(29,78,216,0.12); border-radius:12px; padding:14px 22px; }
+        .ibox { background:rgba(15,118,110,0.04); border:1px solid rgba(15,118,110,0.12); border-radius:12px; padding:14px 22px; }
+        .wbox { background:rgba(180,83,9,0.04); border:1px solid rgba(180,83,9,0.12); border-radius:12px; padding:14px 22px; }
 
         .cw { width:100%; height:clamp(160px,30vh,260px); position:relative; }
 
-        .glow { position:absolute; border-radius:50%; filter:blur(100px); pointer-events:none; z-index:0; max-width:90vw; max-height:90vh; opacity:0.5; }
+        .glow { position:absolute; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; max-width:90vw; max-height:90vh; opacity:0.3; }
 
-        .prog { position:fixed; top:0; left:0; height:3px; background:var(--grad); transition:width 0.3s; z-index:1000; }
+        .prog { position:fixed; top:0; left:0; height:3px; background:var(--primary); transition:width 0.3s; z-index:1000; }
         .nav { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:16px; z-index:1000; background:rgba(255,255,255,0.85); backdrop-filter:blur(14px); border:1px solid var(--border); border-radius:100px; padding:8px 18px; box-shadow:0 4px 20px rgba(0,0,0,0.08); transition:opacity 0.3s,transform 0.3s; }
         .nb { background:transparent; border:none; color:var(--muted); width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:color 0.2s; }
         .nb:hover { color:var(--primary); }
@@ -133,11 +133,11 @@
         body.fs.fs-show .nav { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
         .sc-num { color:var(--muted); font-size:13px; font-family:var(--fm); min-width:48px; text-align:center; }
 
-        .div { width:48px; height:3px; background:var(--grad); border-radius:2px; }
+        .div { width:48px; height:3px; background:var(--primary); border-radius:2px; }
         .tt { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 13px; font-size:12px; font-family:var(--fm); color:var(--primary); }
         .ai { display:flex; align-items:center; gap:14px; padding:11px 16px; border-radius:10px; background:var(--surface); border:1px solid var(--border); }
         .anum { font-family:var(--fh); font-weight:700; font-size:20px; color:var(--primary); min-width:28px; }
-        .fnum { width:32px; height:32px; border-radius:50%; background:var(--grad); display:flex; align-items:center; justify-content:center; font-family:var(--fh); font-weight:700; font-size:14px; flex-shrink:0; color:#fff; }
+        .fnum { width:32px; height:32px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-family:var(--fh); font-weight:700; font-size:14px; flex-shrink:0; color:#fff; }
 
         .img-wrap { width:100%; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--surface); }
         .img-wrap img { width:100%; height:auto; display:block; }
@@ -170,7 +170,7 @@
      1 · Title
 ══════════════════════════════════════ -->
 <div class="slide active">
-    <div class="glow" style="width:600px;height:400px;top:-100px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(79,70,229,0.1),transparent 70%);"></div>
+    <div class="glow" style="width:600px;height:400px;top:-100px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(29,78,216,0.06),transparent 70%);"></div>
     <div class="sc" style="gap:24px;max-width:920px;">
         <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:6px 18px;font-size:13px;color:var(--muted);">
             National University of Singapore &middot; School of Computing &middot; CP4101
@@ -551,7 +551,7 @@
      14 · DePLOB Section Divider
 ══════════════════════════════════════ -->
 <div class="slide">
-    <div class="glow" style="width:500px;height:400px;top:-80px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(79,70,229,0.08),transparent 70%);"></div>
+    <div class="glow" style="width:500px;height:400px;top:-80px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(29,78,216,0.05),transparent 70%);"></div>
     <div class="sc" style="gap:26px;max-width:800px;">
         <h1 class="hero">DePLOB</h1>
         <p class="sub" style="font-size:clamp(18px,2.4vw,28px);">Decentralised Private Limit Order Book</p>
@@ -1212,7 +1212,7 @@
      37 · Conclusion
 ══════════════════════════════════════ -->
 <div class="slide">
-    <div class="glow" style="width:500px;height:350px;top:-80px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(79,70,229,0.06),transparent 70%);"></div>
+    <div class="glow" style="width:500px;height:350px;top:-80px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(29,78,216,0.04),transparent 70%);"></div>
     <div class="sc" style="gap:22px;max-width:820px;">
         <span class="tag green">Conclusion</span>
         <h2 class="title"><span class="gt">Conclusion</span></h2>
@@ -1244,7 +1244,7 @@
      38 · Q&A
 ══════════════════════════════════════ -->
 <div class="slide">
-    <div class="glow" style="width:500px;height:400px;top:-80px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(13,148,136,0.06),transparent 70%);"></div>
+    <div class="glow" style="width:500px;height:400px;top:-80px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(15,118,110,0.04),transparent 70%);"></div>
     <div class="sc" style="gap:26px;max-width:700px;">
         <h1 class="hero">Q&amp;A</h1>
         <div class="div" style="margin:0 auto;"></div>
@@ -1336,9 +1336,9 @@
         data: {
             labels: ['Deposit', 'Withdraw', 'Settlement', 'Order Place', 'Order Cancel'],
             datasets: [
-                { label: 'DePLOB', data: [286715, 310513, 363048, 0, 0], backgroundColor: 'rgba(79,70,229,0.75)', borderRadius: 6 },
-                { label: 'Tornado Cash', data: [1088000, 301000, null, null, null], backgroundColor: 'rgba(124,58,237,0.45)', borderRadius: 6 },
-                { label: 'Uniswap V3', data: [null, null, 150000, 150000, 150000], backgroundColor: 'rgba(13,148,136,0.45)', borderRadius: 6 }
+                { label: 'DePLOB', data: [286715, 310513, 363048, 0, 0], backgroundColor: 'rgba(29,78,216,0.8)', borderRadius: 6 },
+                { label: 'Tornado Cash', data: [1088000, 301000, null, null, null], backgroundColor: 'rgba(107,114,128,0.35)', borderRadius: 6 },
+                { label: 'Uniswap V3', data: [null, null, 150000, 150000, 150000], backgroundColor: 'rgba(15,118,110,0.5)', borderRadius: 6 }
             ]
         },
         options: {
